@@ -1,4 +1,4 @@
-import type { Table } from '../modules/guest/types/guest.types'
+import type { Table } from '../modules/waiter/types/waiter.types'
 
 export const tables: Table[] = [
   { 
@@ -7,7 +7,8 @@ export const tables: Table[] = [
     number: 1, 
     capacity: 4, 
     status: 'occupied',
-    reservation: null
+    reservation: null,
+    alerts: ['confirm_order', 'need_waiter']
   },
   { 
     id: 2, 
@@ -15,7 +16,8 @@ export const tables: Table[] = [
     number: 2, 
     capacity: 2, 
     status: 'available',
-    reservation: null
+    reservation: null,
+    alerts: []
   },
   { 
     id: 3, 
@@ -28,27 +30,30 @@ export const tables: Table[] = [
       time: '22:00',
       date: '2026-02-25',
       guestCount: 4
-    }
+    },
+    alerts: ['new_order']
   },
-  { 
-    id: 4, 
+  {
+    id: 4,
     name: 'طاولة الحديقة', 
-    number: 4, 
-    capacity: 4, 
+    number: 4,
+    capacity: 4,
     status: 'reserved',
     reservation: {
       guestName: 'سارة محمد',
       time: '21:00',
       date: '2026-02-25',
       guestCount: 2
-    }
+    },
+    alerts: []
   },
   { 
     id: 5, 
     name: 'طاولة VIP', 
     number: 5, 
-    capacity: 8, 
+    capacity: 15, 
     status: 'available',
-    reservation: null
+    reservation: null,
+    alerts: []
   },
 ]

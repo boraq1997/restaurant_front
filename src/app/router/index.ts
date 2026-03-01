@@ -3,8 +3,12 @@ import Login from '../../modules/auth/pages/Login.vue';
 
 const routes: RouteRecordRaw[] = [
   { path: '/login', component: Login },
-  { 
-    path: '/table/:id', 
+  {
+    path: '/',
+    component: () => import('../../modules/waiter/pages/WaiterHome.vue'),
+  },
+  {
+    path: '/table/:id',
     component: () => import('../../modules/guest/pages/TableOrder.vue'),
   },
   { path: '/:pathMatch(.*)*', redirect: '/login' },

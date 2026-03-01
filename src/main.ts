@@ -41,7 +41,6 @@ app.use(createPinia());
 
 const MyPreset = definePreset(Aura, {
   semantic: {
-
     // اللون الأساسي للنظام
     primary: {
       50: '{orange.50}',
