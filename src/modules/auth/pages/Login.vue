@@ -8,13 +8,15 @@ import InputIcon from "primevue/inputicon";
 import Avatar from 'primevue/avatar';
 import FloatLabel from 'primevue/floatlabel';
 import { useToast } from 'primevue/usetoast';
+import { useAuthStore } from "../store/auth.store";
 
 const username = ref('');
 const password = ref('');
 const loading = ref(false);
 const toast = useToast();
+const authStore = useAuthStore();
 
-const handleLogin = () => {
+const handleLogin = async () => {
   if (!username.value || !password.value) {
     toast.add({
       severity: 'warn',
@@ -25,11 +27,16 @@ const handleLogin = () => {
     return;
   }
 
-  loading.value = true;
-  // TODO: replace with real auth call
-  setTimeout(() => {
-    loading.value = false;
-  }, 2000);
+  try {
+    await authStore.login({ username: username.value, password: password.value });
+  } catch (error: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'خطأ',
+      detail: error?.response?.data?.message || 'فشل تسجيل الدخول، تحقق من البيانات',
+      life: 4000
+    });
+  }
 };
 </script>
 
