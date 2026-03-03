@@ -24,29 +24,74 @@ const routes: RouteRecordRaw[] = [
     meta: { public: true },
   },
 
-  // ── كابتن الصالة ───────────────────────────────────
+  // ── ويتر وكاشير (بدون layout) ─────────────────────
   {
     path: '/waiter',
     name: 'waiter-home',
     component: () => import('../../modules/waiter/pages/WaiterHome.vue'),
-    meta: { requiresAuth: true, roles: ['Waiter', 'Admin'] },
+    meta: { requiresAuth: true, roles: ['Waiter'] },
   },
-
-  // ── الكاشير ────────────────────────────────────────
   {
     path: '/cashier',
     name: 'cashier-home',
     component: () => import('../../modules/cashier/pages/CashierHome.vue'),
-    meta: { requiresAuth: true, roles: ['Cashier', 'Admin'] },
+    meta: { requiresAuth: true, roles: ['Cashier'] },
   },
 
-  // ── الأدمن ─────────────────────────────────────────
-  // {
-  //   path: '/dashboard',
-  //   name: 'dashboard',
-  //   component: () => import('../../modules/admin/pages/AdminDashboard.vue'),
-  //   meta: { requiresAuth: true, roles: ['Admin'] },
-  // },
+  // ── الأدمن مع AdminLayout ──────────────────────────
+  {
+    path: '/dashboard',
+    component: () => import('../../modules/dashboard/layout/AdminLayout.vue'),
+    meta: { requiresAuth: true, roles: ['Admin'] },
+    children: [
+      {
+        path: '',
+        name: 'dashboard',
+        component: () => import('../../modules/dashboard/home/pages/DashboardHome.vue'),
+      },
+      {
+        path: 'menu',
+        name: 'menu-categories',
+        component: () => import('../../modules/dashboard/menu/pages/CategoriesPage.vue'),
+      },
+      {
+        path: 'menu/:categoryId',
+        name: 'menu-items',
+        component: () => import('../../modules/dashboard/menu/pages/CategoryItemsPage.vue'),
+      },
+      {
+        path: '/table/:id',
+        name: 'table-order',
+        component: () => import('../../modules/guest/pages/TableOrder.vue'),
+      },
+      // {
+      //   path: 'tables',
+      //   name: 'dashboard-tables',
+      //   component: () => import('../../modules/dashboard/tables/pages/TablesPage.vue'),
+      // },
+      {
+        path: 'users',
+        name: 'dashboard-users',
+        component: () => import('../../modules/dashboard/users/pages/UsersHome.vue'),
+      },
+      // {
+      //   path: 'orders',
+      //   name: 'dashboard-orders',
+      //   component: () => import('../../modules/dashboard/orders/pages/OrdersPage.vue'),
+      // },
+      // ── ويتر وكاشير داخل Layout للأدمن ──────────────
+      {
+        path: 'waiter',
+        name: 'admin-waiter',
+        component: () => import('../../modules/waiter/pages/WaiterHome.vue'),
+      },
+      {
+        path: 'cashier',
+        name: 'admin-cashier',
+        component: () => import('../../modules/cashier/pages/CashierHome.vue'),
+      },
+    ],
+  },
 
   // ── Redirects ──────────────────────────────────────
   { path: '/', redirect: '/login' },
@@ -63,25 +108,20 @@ router.beforeEach(async (to) => {
   const { useAuthStore } = await import('../../modules/auth/store/auth.store')
   const auth = useAuthStore()
 
-  const isAuth  = !!auth.token
-  const role    = auth.user?.role as keyof typeof ROLE_HOME_MAP | undefined
-  const myHome  = role ? ROLE_HOME_MAP[role] : null
+  const isAuth = !!auth.token
+  const role   = auth.user?.role as keyof typeof ROLE_HOME_MAP | undefined
+  const myHome = role ? ROLE_HOME_MAP[role] : null
 
-  // صفحة الزبون - متاحة للجميع بدون تسجيل دخول
   if (to.meta.public) return true
 
-  // صفحة تسجيل الدخول - إذا كان مسجلاً وجّهه لصفحته
   if (to.meta.guest) {
     return isAuth && myHome ? myHome : true
   }
 
-  // باقي الصفحات تحتاج تسجيل دخول
   if (!isAuth) return '/login'
 
-  // التحقق من الدور
   const allowedRoles = to.meta.roles as string[] | undefined
   if (allowedRoles && role && !allowedRoles.includes(role)) {
-    // ليس له صلاحية → وجّهه لصفحته
     return myHome ?? '/login'
   }
 

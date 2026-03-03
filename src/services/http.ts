@@ -1,5 +1,4 @@
 import axios from 'axios'
-import { useAuthStore } from '../modules/auth/store/auth.store'
 
 const http = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://72.62.63.16:9090/api',
@@ -22,6 +21,7 @@ http.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
+      localStorage.removeItem('user')
       window.location.href = '/login'
     }
     return Promise.reject(error)

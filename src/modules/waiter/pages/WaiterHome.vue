@@ -8,6 +8,7 @@
         <!-- Row 1: Logo + Time -->
         <div class="flex align-items-center justify-content-between mb-3">
           <div class="flex align-items-center gap-2">
+
             <div class="w-2rem h-2rem border-round-lg bg-primary flex align-items-center justify-content-center">
               <i class="pi pi-shop text-white text-sm"></i>
             </div>
@@ -16,6 +17,7 @@
               <span class="text-xs text-500">الويتر</span>
             </div>
           </div>
+          
 
           <div class="flex align-items-center gap-2">
             <!-- Alerts Bell -->
@@ -32,6 +34,7 @@
             <div class="flex align-items-center gap-1 surface-100 px-2 py-1 border-round-lg">
               <i class="pi pi-clock text-primary text-xs"></i>
               <span class="text-xs font-bold text-primary">{{ currentTime }}</span>
+              <LogoutButton />
             </div>
           </div>
         </div>
@@ -90,7 +93,7 @@
         </div>
 
         <!-- Grid -->
-        <TableGrid v-else :tables="filteredTables" @select="goToTable" />
+        <TableGrid v-else :tables="filteredTables" @select="onTableSelect" />
       </Transition>
 
     </main>
@@ -110,7 +113,7 @@
           v-for="table in tablesWithAlerts"
           :key="table.id"
           class="surface-50 border-round-lg p-3 border-1 surface-border cursor-pointer hover:surface-100 transition-all transition-duration-200"
-          @click="goToTable(table); showAlerts = false"
+          @click="onTableSelect(table); showAlerts = false"
         >
           <div class="flex align-items-center justify-content-between mb-2">
             <span class="font-bold text-900 text-sm">{{ table.name }}</span>
@@ -146,6 +149,7 @@ import TableStatsBar from '../components/TableStatsBar.vue'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
+import LogoutButton from '../../../components/shared/Logoutbutton.vue';
 
 const router     = useRouter()
 const waiter     = useWaiterStore()

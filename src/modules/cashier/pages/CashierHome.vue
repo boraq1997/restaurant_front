@@ -22,6 +22,7 @@
           <div class="flex align-items-center gap-1 surface-100 px-2 py-1 border-round-lg">
             <i class="pi pi-clock text-primary text-xs" />
             <span class="text-xs font-bold text-primary">{{ currentTime }}</span>
+            <LogoutButton />
           </div>
         </div>
 
@@ -189,6 +190,7 @@ import InvoiceDialog from '../components/InvoiceDialog.vue'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Drawer from 'primevue/drawer'
+import LogoutButton from '../../../components/shared/LogoutButton.vue'
 
 const toast          = useToast()
 const currentTime    = ref('')

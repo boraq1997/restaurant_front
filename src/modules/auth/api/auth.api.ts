@@ -1,8 +1,8 @@
-import apiClient from '../../../services/api-client'
+import http from '../../../services/http'
 import type { LoginPayload, LoginResponse } from '../types/auth.types'
 
 export default {
   login(payload: LoginPayload): Promise<LoginResponse> {
-    return apiClient.post('/login', payload)
+    return http.post('/login', payload).then(res => res.data)
   },
 }

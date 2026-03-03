@@ -7,50 +7,54 @@ import router from '../../../app/router'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string>(localStorage.getItem('token') || '')
-  const user  = ref<AuthUser | null>(
+  const user = ref<AuthUser | null>(
     JSON.parse(localStorage.getItem('user') || 'null')
   )
   const loading = ref(false)
+  const error = ref<string | null>(null)
 
   const isAuthenticated = computed(() => !!token.value)
   const userRole = computed<UserRole | null>(() => user.value?.role ?? null)
 
-  // ── تسجيل الدخول ──────────────────────────────
   async function login(payload: LoginPayload) {
     loading.value = true
+    error.value = null
+
     try {
       const res = await AuthApi.login(payload)
 
+      // الـ backend يرجع "user" وليس "username"
       const authUser: AuthUser = {
         username: res.user,
-        role:     res.role,
+        role: res.role,
       }
 
       token.value = res.token
-      user.value  = authUser
+      user.value = authUser
 
       localStorage.setItem('token', res.token)
-      localStorage.setItem('user',  JSON.stringify(authUser))
+      localStorage.setItem('user', JSON.stringify(authUser))
 
-      // التوجيه حسب الدور
       const home = ROLE_HOME_MAP[res.role] ?? '/waiter'
       await router.push(home)
 
+    } catch (err: any) {
+      error.value = err?.response?.data?.message || 'فشل تسجيل الدخول'
+      throw err
     } finally {
       loading.value = false
     }
   }
 
-  // ── تسجيل الخروج ──────────────────────────────
   function logout() {
     token.value = ''
-    user.value  = null
+    user.value = null
+    error.value = null
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     router.push('/login')
   }
 
-  // ── التحقق من الدور ───────────────────────────
   function hasRole(...roles: UserRole[]): boolean {
     return !!user.value && roles.includes(user.value.role)
   }
@@ -59,6 +63,7 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     user,
     loading,
+    error,
     isAuthenticated,
     userRole,
     login,

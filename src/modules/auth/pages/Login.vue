@@ -12,7 +12,6 @@ import { useAuthStore } from "../store/auth.store";
 
 const username = ref('');
 const password = ref('');
-const loading = ref(false);
 const toast = useToast();
 const authStore = useAuthStore();
 
@@ -29,11 +28,21 @@ const handleLogin = async () => {
 
   try {
     await authStore.login({ username: username.value, password: password.value });
+    toast.add({
+      severity: 'success',
+      summary: 'مرحباً',
+      detail: `أهلاً ${username.value}`,
+      life: 2000
+    });
   } catch (error: any) {
+    const msg =
+      error?.response?.data?.message ||
+      error?.response?.data ||
+      'فشل تسجيل الدخول، تحقق من البيانات';
     toast.add({
       severity: 'error',
-      summary: 'خطأ',
-      detail: error?.response?.data?.message || 'فشل تسجيل الدخول، تحقق من البيانات',
+      summary: 'خطأ في تسجيل الدخول',
+      detail: typeof msg === 'string' ? msg : 'بيانات غير صحيحة',
       life: 4000
     });
   }
@@ -41,12 +50,14 @@ const handleLogin = async () => {
 </script>
 
 <template>
-    <div class="login-form" dir="rtl">
+  <!-- منع أي submit افتراضي -->
+  <div class="login-wrapper" dir="rtl" @keydown.enter.prevent="handleLogin">
+    <div class="login-form">
 
       <!-- Header -->
       <div class="form-header">
         <Avatar image="/logo2.jpg" size="xlarge" shape="circle" />
-        <h4 class="form-title text-color-secondary">تسجيل الدخول لإدارة النظام</h4>
+        <h4 class="form-title">تسجيل الدخول لإدارة النظام</h4>
       </div>
 
       <!-- Fields -->
@@ -69,7 +80,7 @@ const handleLogin = async () => {
         <!-- Password -->
         <FloatLabel variant="on">
           <IconField>
-            <InputIcon class="fas fa-lock"/>
+            <InputIcon class="fas fa-lock" />
             <Password
               id="password"
               v-model="password"
@@ -83,30 +94,29 @@ const handleLogin = async () => {
           <label for="password-input">كلمة المرور</label>
         </FloatLabel>
 
-        <!-- Forgot password -->
-        <div class="forgot-row">
-          <Button
-            label="هل نسيت كلمة المرور؟"
-            variant="link"
-            size="small"
-            class="forgot-btn"
-          />
-        </div>
-
         <!-- Submit -->
         <Button
           label="دخول"
           icon="pi pi-sign-in"
-          :loading="loading"
+          :loading="authStore.loading"
           fluid
-          @click="handleLogin"
+          @click.prevent="handleLogin"
         />
 
       </div>
     </div>
+  </div>
 </template>
 
 <style scoped>
+.login-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--p-surface-50);
+}
+
 .login-form {
   width: 360px;
   background: var(--p-surface-0);
@@ -114,8 +124,6 @@ const handleLogin = async () => {
   border-radius: 12px;
   padding: 2rem;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
-  margin: auto;
-  margin-top: 20vh;
 }
 
 .form-header {
@@ -131,23 +139,12 @@ const handleLogin = async () => {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
-  color: var(--p-text-color);
+  color: var(--p-text-color-secondary);
 }
 
 .fields-container {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-}
-
-.forgot-row {
-  display: flex;
-  justify-content: flex-start; /* right side in RTL */
-  margin-top: -0.75rem;
-}
-
-.forgot-btn {
-  padding: 0 !important;
-  font-size: 0.85rem;
 }
 </style>

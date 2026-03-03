@@ -4,7 +4,7 @@ export interface MenuCategory {
   image?: string
   isActive: boolean
   printerId?: number | null
-  items?: MenuItem[]
+  menuItems?: MenuItem[]
 }
 
 export interface MenuItem {
@@ -16,7 +16,7 @@ export interface MenuItem {
   isAvailable: boolean
   categoryId: number
   specificPrinterId?: number
-  options?: MenuOption[]
+  menuOptions?: MenuOption[]
 }
 
 export interface MenuOption {
