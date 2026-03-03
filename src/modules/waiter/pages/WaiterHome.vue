@@ -137,46 +137,61 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { tables } from '../../../mock/tables.mock'
-import type { Table, TableAlert } from '../types/waiter.types'
+import { useWaiterStore } from '../store/waiter.store'
+import { useAuthStore } from '../../auth/store/auth.store'
+import { useToast } from 'primevue/usetoast'
+import type { Table, TableAlert, TableStatusUI } from '../types/waiter.types'
 import TableGrid from '../components/TableGrid.vue'
 import TableStatsBar from '../components/TableStatsBar.vue'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 
-const router = useRouter()
-const currentTime = ref('')
-const activeFilter = ref<Table['status'] | null>(null)
+const router     = useRouter()
+const waiter     = useWaiterStore()
+const auth       = useAuthStore()
+const toast      = useToast()
+
+const currentTime  = ref('')
+const activeFilter = ref<TableStatusUI | null>(null)
 const isRefreshing = ref(false)
-const showAlerts = ref(false)
+const showAlerts   = ref(false)
 let timer: ReturnType<typeof setInterval>
 
-onMounted(() => { updateTime(); timer = setInterval(updateTime, 1000) })
+// ── Lifecycle ──────────────────────────────────────────
+onMounted(async () => {
+  updateTime()
+  timer = setInterval(updateTime, 1000)
+  await waiter.fetchTables()
+})
 onUnmounted(() => clearInterval(timer))
 
+// ── Time ───────────────────────────────────────────────
 function updateTime() {
-  currentTime.value = new Date().toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit' })
+  currentTime.value = new Date().toLocaleTimeString('ar-IQ', {
+    hour: '2-digit', minute: '2-digit'
+  })
 }
 
+// ── Refresh ────────────────────────────────────────────
 async function refresh() {
   isRefreshing.value = true
-  await new Promise(r => setTimeout(r, 800))
+  await waiter.fetchTables()
   isRefreshing.value = false
+  toast.add({ severity: 'success', summary: 'تم التحديث', life: 1500 })
 }
 
-const availableCount = computed(() => tables.filter(t => t.status === 'available').length)
-const occupiedCount  = computed(() => tables.filter(t => t.status === 'occupied').length)
-const reservedCount  = computed(() => tables.filter(t => t.status === 'reserved').length)
+// ── Computed من الـ Store ──────────────────────────────
+const availableCount = computed(() => waiter.availableCount)
+const occupiedCount  = computed(() => waiter.occupiedCount)
+const reservedCount  = computed(() => waiter.reservedCount)
+const filteredTables = computed(() => waiter.filteredTables(activeFilter.value))
 
-const filteredTables = computed(() =>
-  activeFilter.value ? tables.filter(t => t.status === activeFilter.value) : tables
+const tablesWithAlerts = computed(() =>
+  waiter.tables.filter(t => t.alerts.length > 0)
 )
-
-const tablesWithAlerts = computed(() => tables.filter(t => t.alerts?.length))
-
 const alertsCount = computed(() =>
-  tables.reduce((sum, t) => sum + (t.alerts?.length ?? 0), 0)
+  waiter.tables.reduce((sum, t) => sum + t.alerts.length, 0)
 )
 
 const filterLabel = computed(() => {
@@ -188,34 +203,38 @@ const filterLabel = computed(() => {
   }
 })
 
-function onFilter(status: Table['status'] | null) {
+// ── Events ─────────────────────────────────────────────
+function onFilter(status: TableStatusUI) {
   activeFilter.value = activeFilter.value === status ? null : status
 }
 
-function goToTable(table: Table) {
-  router.push(`/table/${table.id}`)
+function onTableSelect(table: Table) {
+  router.push(`/waiter/table/${table.id}`)
 }
 
-function alertLabel(alert: TableAlert) {
-  switch (alert) {
-    case 'confirm_order': return 'بحاجة لتأكيد الطلب'
-    case 'new_order':     return 'بحاجة لإضافة طلب جديد'
-    case 'need_waiter':   return 'بحاجة إلى الويتر'
-  }
+function logout() {
+  auth.logout()
 }
 
+// ── Alert Helpers ──────────────────────────────────────
 function alertIcon(alert: TableAlert) {
   switch (alert) {
-    case 'confirm_order': return 'pi pi-check-square'
-    case 'new_order':     return 'pi pi-plus-circle'
-    case 'need_waiter':   return 'pi pi-bell'
+    case 'confirm_order': return 'pi pi-check-circle text-orange-500'
+    case 'new_order':     return 'pi pi-bell text-blue-500'
+    case 'need_waiter':   return 'pi pi-exclamation-circle text-red-500'
   }
 }
-
+function alertLabel(alert: TableAlert) {
+  switch (alert) {
+    case 'confirm_order': return 'بانتظار التأكيد'
+    case 'new_order':     return 'طلب جديد'
+    case 'need_waiter':   return 'يحتاج مساعدة'
+  }
+}
 function alertTextClass(alert: TableAlert) {
   switch (alert) {
-    case 'confirm_order': return 'text-blue-600'
-    case 'new_order':     return 'text-orange-600'
+    case 'confirm_order': return 'text-orange-600'
+    case 'new_order':     return 'text-blue-600'
     case 'need_waiter':   return 'text-red-600'
   }
 }

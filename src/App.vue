@@ -1,8 +1,29 @@
 <script setup lang="ts">
+import {ref, onMounted, onUnmounted}from 'vue';
+import Toast from 'primevue/toast';
+import ConfirmDialog from 'primevue/confirmdialog';
+import ScrollTop from 'primevue/scrolltop';
+
+const showBackToTop = ref(false);
+
+const handleScroll = () => {
+  showBackToTop.value = window.scrollY > 300;
+};
+
+onMounted(() => {
+  window.addEventListener('scroll', handleScroll);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll);
+});
 </script>
 
 <template>
+  <Toast />
+  <ConfirmDialog dir="rtl"/>
   <RouterView/>
+  <ScrollTop/>
 </template>
 
 <style scoped>
