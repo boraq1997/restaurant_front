@@ -8,8 +8,8 @@
       >
         <Badge v-if="totalItems > 0" :value="totalItems" />
         <span class="text-color-secondary text-sm">الإجمالي</span>
-        <span class="font-bold text-primary text-lg">{{ totalPrice }} د.ع</span>
-        <i v-if="items.length > 0" class="pi pi-angle-up text-primary" />
+        <span class="font-bold text-lg">{{ totalPrice }} د.ع</span>
+        <i v-if="items.length > 0" class="pi pi-angle-up" />
       </div>
       <Button
         label="تأكيد الطلب"
@@ -30,7 +30,7 @@
   >
     <template #header>
       <div class="flex align-items-center gap-2">
-        <i class="pi pi-shopping-cart text-primary" />
+        <i class="pi pi-shopping-cart" />
         <span class="font-bold text-lg">سلة الطلبات</span>
         <Badge :value="totalItems" />
       </div>
@@ -47,18 +47,31 @@
       <div
         v-for="cartItem in items"
         :key="cartItem.menuItem.id"
-        class="flex align-items-center justify-content-between surface-hover border-round-lg p-3 border-1 surface-border"
+        class="flex align-items-center justify-content-between border-round-lg p-3 border-1 surface-border"
       >
         <div class="flex align-items-center gap-3">
-          <img
-            :src="cartItem.menuItem.image"
-            :alt="cartItem.menuItem.name"
-            class="border-round"
-            style="width: 44px; height: 44px; object-fit: cover;"
-          />
+
+          <!-- Image with fallback -->
+          <div class="flex-shrink-0 relative" style="width: 44px; height: 44px;">
+            <img
+              :src="cartItem.menuItem.image ?? '/defaultImages/defaultFood.jpeg'"
+              :alt="cartItem.menuItem.name"
+              class="w-full h-full border-round"
+              style="object-fit: cover;"
+              @error="(e) => ((e.target as HTMLImageElement).src = '/defaultImages/defaultFood.jpeg')"
+            />
+            <div
+              v-if="!cartItem.menuItem.available"
+              class="absolute top-0 left-0 w-full h-full flex align-items-center justify-content-center border-round"
+              style="background: rgba(0,0,0,0.5);"
+            >
+              <Tag value="غير متاح" severity="secondary" class="text-xs" />
+            </div>
+          </div>
+
           <div>
             <p class="m-0 font-semibold text-sm">{{ cartItem.menuItem.name }}</p>
-            <p class="m-0 text-primary text-xs font-medium mt-1">
+            <p class="m-0 text-xs font-medium mt-1">
               {{ cartItem.menuItem.price * cartItem.quantity }} د.ع
             </p>
           </div>
@@ -76,7 +89,7 @@
     <Divider />
     <div class="flex align-items-center justify-content-between mb-3">
       <span class="text-color-secondary font-medium">الإجمالي</span>
-      <span class="font-bold text-primary text-xl">{{ totalPrice }} د.ع</span>
+      <span class="font-bold text-xl">{{ totalPrice }} د.ع</span>
     </div>
     <Button
       label="تأكيد الطلب"
@@ -94,6 +107,7 @@ import Button from 'primevue/button'
 import Badge from 'primevue/badge'
 import Divider from 'primevue/divider'
 import Drawer from 'primevue/drawer'
+import Tag from 'primevue/tag'
 import type { CartItem } from '../../../types/menu.types'
 
 const props = defineProps<{

@@ -147,7 +147,9 @@ import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import ProgressSpinner from 'primevue/progressspinner'
+import { useAuthStore } from '../../auth/store/auth.store'
 
+const auth = useAuthStore()
 const router = useRouter()
 const toast  = useToast()
 
@@ -239,7 +241,10 @@ function onFilter(status: Table['status']) {
 }
 
 function onTableSelect(table: Table) {
-  router.push(`/waiter/table/${table.id}`)
+  const isAdmin = auth.user?.role === 'Admin'
+  //onst base    = isAdmin ? '/dashboard/waiter/table' : '/waiter/table'
+  const base = 'waiter/table'
+  router.push(`${base}/${table.id}`)
 }
 
 function alertIcon(alert: TableAlert) {

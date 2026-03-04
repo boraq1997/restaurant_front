@@ -24,19 +24,25 @@ const routes: RouteRecordRaw[] = [
     meta: { public: true },
   },
 
-  // ── ويتر وكاشير (بدون layout) ─────────────────────
+  // ── ويتر (بدون layout) ────────────────────────────
   {
     path: '/waiter',
     name: 'waiter-home',
     component: () => import('../../modules/waiter/pages/WaiterHome.vue'),
-    //meta: { requiresAuth: true, roles: ['Waiter'] },
     meta: { public: true },
   },
+  {
+    path: '/waiter/table/:id',
+    name: 'waiter-table',
+    component: () => import('../../modules/guest/pages/TableOrder.vue'),
+    meta: { public: true },
+  },
+
+  // ── كاشير (بدون layout) ───────────────────────────
   {
     path: '/cashier',
     name: 'cashier-home',
     component: () => import('../../modules/cashier/pages/CashierHome.vue'),
-    //meta: { requiresAuth: true, roles: ['Cashier'] },
     meta: { public: true },
   },
 
@@ -61,31 +67,22 @@ const routes: RouteRecordRaw[] = [
         name: 'menu-items',
         component: () => import('../../modules/dashboard/menu/pages/CategoryItemsPage.vue'),
       },
-      {
-        path: '/table/:id',
-        name: 'table-order',
-        component: () => import('../../modules/guest/pages/TableOrder.vue'),
-      },
-      // {
-      //   path: 'tables',
-      //   name: 'dashboard-tables',
-      //   component: () => import('../../modules/dashboard/tables/pages/TablesPage.vue'),
-      // },
+      // ← احذف هذا تماماً (كان يسبب المشكلة)
+      // { path: '/table/:id', name: 'table-order', ... }
       {
         path: 'users',
         name: 'dashboard-users',
         component: () => import('../../modules/dashboard/users/pages/UsersHome.vue'),
       },
-      // {
-      //   path: 'orders',
-      //   name: 'dashboard-orders',
-      //   component: () => import('../../modules/dashboard/orders/pages/OrdersPage.vue'),
-      // },
-      // ── ويتر وكاشير داخل Layout للأدمن ──────────────
       {
         path: 'waiter',
         name: 'admin-waiter',
         component: () => import('../../modules/waiter/pages/WaiterHome.vue'),
+      },
+      {
+        path: 'waiter/table/:id',        // ← صفحة الطاولة للأدمن داخل Layout
+        name: 'admin-waiter-table',
+        component: () => import('../../modules/guest/pages/TableOrder.vue'),
       },
       {
         path: 'cashier',

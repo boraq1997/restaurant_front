@@ -11,7 +11,11 @@
     >
       <template #default>
         <span class="flex align-items-center gap-1">
-          <span>{{ category.icon }}</span>
+          <img
+            :src="category.image ?? '/defaultImages/defaultFood.jpeg'"
+            :alt="category.name"
+            style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover;"
+          />
           <span class="text-sm">{{ category.name }}</span>
         </span>
       </template>

@@ -10,6 +10,7 @@ export interface MenuCategory {
 export interface MenuItem {
   id: number
   name: string
+  image: string
   description?: string
   price: number
   cost?: number

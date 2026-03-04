@@ -7,7 +7,7 @@
     <div class="flex gap-0">
       <div class="flex-shrink-0 relative" style="width: 110px; height: 110px;">
         <img
-          :src="item.image"
+          :src="item.image ?? '/defaultImages/defaultFood.jpeg'"
           :alt="item.name"
           class="w-full h-full"
           style="object-fit: cover;"

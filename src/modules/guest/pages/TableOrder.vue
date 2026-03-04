@@ -35,7 +35,7 @@
           </Card>
         </div>
 
-        <div class="px-3 py-3 flex flex-column gap-3" style="padding-bottom: 120px;">
+        <div class="px-3 py-3 flex flex-column gap-3 " style="padding-bottom: 120px;">
           <MenuItemCard
             v-for="item in filteredItems"
             :key="item.id"
@@ -59,10 +59,12 @@
         <div class="flex flex-column flex-1 overflow-hidden">
           <div class="px-3 pt-3 pb-2 surface-card shadow-1 z-4" style="position: sticky; top: 0;">
             <MenuCategory
+              v-if="allCategories.length"
               :categories="categories"
               :selected-id="selectedCategoryId"
               @select="selectedCategoryId = $event"
             />
+            {{ console.log(allCategories) }}
           </div>
           <div class="overflow-y-auto flex-1 px-3 py-3">
             <div class="grid">
@@ -141,11 +143,15 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { menuApi, orderApi } from '../../../services/api.service'
-import type { MenuCategoryApi, MenuItemApi, MenuOptionApi } from '../../../types/api.types'
+import type { MenuCategoryApi, MenuItemApi } from '../../../types/api.types'
+import type { CartItemLocal } from '../../../components/shared/menu/MenuItemDialog.vue'
+
 import MenuCategory from '../../../components/shared/menu/MenuCategory.vue'
 import MenuItemCard from '../../../components/shared/menu/MenuItem.vue'
 import OrderCart from '../../../components/shared/menu/OrderCart.vue'
-import MenuItemDialog, { type CartItemLocal } from '../../../components/shared/menu/MenuItemDialog.vue'
+import MenuItemDialog from '../../../components/shared/menu/MenuItemDialog.vue'
+
+//PRIMVUE IMPORTS
 import Card from 'primevue/card'
 import Tag from 'primevue/tag'
 import Badge from 'primevue/badge'
@@ -155,34 +161,55 @@ import ProgressSpinner from 'primevue/progressspinner'
 // ---- الثوابت ----
 const CUSTOMER_ID = 1 // مؤقت — يُستبدل لاحقاً بالـ auth
 
+// ---- composables ----
 const route = useRoute()
 const toast = useToast()
 
-const tableId = computed(() => Number(route.params.id))
-
+// ---- state ----
 const loading = ref(true)
 const submitting = ref(false)
+
 const allCategories = ref<MenuCategoryApi[]>([])
-const selectedCategoryId = ref<number>(0)
+const selectedCategoryId = ref<number | null>(0)
+
 const cartItems = ref<CartItemLocal[]>([])
 const dialogVisible = ref(false)
 const selectedItem = ref<MenuItemApi | null>(null)
 
-// invoiceId يُنشأ عند أول إضافة ويُحفظ للإضافات التالية
 const currentInvoiceId = ref<number | null>(null)
 
 // ---- computed ----
 
-/** الفئات التي تحتوي على items */
-const categories = computed(() =>
-  allCategories.value
-    .filter(c => c.isActive && c.items?.length)
-    .map(c => ({ id: c.id, name: c.name, icon: '🍽️' }))
-)
+const tableId = computed(() => {
+  const id = Number(route.params.id)
+  return isNaN(id) ? null : id
+})
 
+/** الفئات الفعالة التي تحتوي على عناصر */
+const categories = computed(() => {
+  return Array.isArray(allCategories.value)
+    ? allCategories.value
+        .filter(c => c.isActive && Array.isArray(c.menuItems) && c.menuItems.length > 0)
+        .map(c => ({
+          id: c.id,
+          name: c.name,
+          icon: '🍽️'
+        }))
+    : []
+})
+
+/** العناصر حسب الفئة المختارة */
 const filteredItems = computed(() => {
-  const cat = allCategories.value.find(c => c.id === selectedCategoryId.value)
-  return cat?.items?.filter(i => i.isAvailable) ?? []
+  if (!Array.isArray(allCategories.value)) return []
+  if (!selectedCategoryId.value) return []
+
+  const cat = allCategories.value.find(
+    c => c.id === Number(selectedCategoryId.value)
+  )
+
+  if (!cat || !Array.isArray(cat.menuItems)) return []
+
+  return cat.menuItems.filter(i => i.isAvailable)
 })
 
 const totalCartCount = computed(() =>
@@ -196,7 +223,10 @@ const totalPrice = computed(() =>
 // ---- helpers ----
 
 function itemTotal(item: CartItemLocal) {
-  const optionsTotal = item.selectedOptions.reduce((s, o) => s + o.price, 0)
+  const optionsTotal = item.selectedOptions.reduce(
+    (s, o) => s + o.price,
+    0
+  )
   return (item.menuItem.price + optionsTotal) * item.quantity
 }
 
@@ -204,13 +234,24 @@ function itemTotal(item: CartItemLocal) {
 
 onMounted(async () => {
   try {
-    const res = await menuApi.getAll()
-    allCategories.value = res.data
-    if (categories.value.length) {
+    const res = await menuApi.getFullMenu()
+    console.log(res)
+    // تأكد أن البيانات Array
+    allCategories.value = Array.isArray(res) ? res : []
+
+    // اختر أول فئة فعالة تلقائياً
+    if (categories.value.length > 0) {
       selectedCategoryId.value = categories.value[0].id
     }
-  } catch {
-    toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل تحميل المنيو', life: 3000 })
+
+
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'خطأ',
+      detail: 'فشل تحميل المنيو',
+      life: 3000
+    })
   } finally {
     loading.value = false
   }
@@ -224,13 +265,13 @@ function openItem(item: MenuItemApi) {
 }
 
 function onDialogAdd(cartItem: CartItemLocal) {
-  // ابحث عن نفس الصنف مع نفس الخيارات
   const existingIdx = cartItems.value.findIndex(c =>
     c.menuItem.id === cartItem.menuItem.id &&
     JSON.stringify(c.selectedOptions.map(o => o.id).sort()) ===
     JSON.stringify(cartItem.selectedOptions.map(o => o.id).sort()) &&
     c.note === cartItem.note
   )
+
   if (existingIdx !== -1) {
     cartItems.value[existingIdx].quantity += cartItem.quantity
   } else {
@@ -238,25 +279,33 @@ function onDialogAdd(cartItem: CartItemLocal) {
   }
 }
 
-function increaseItem(idx: number) {
-  cartItems.value[idx].quantity++
+// ✅ صحيح - البحث عبر menuItem.id
+function increaseItem(id: number) {
+  const item = cartItems.value.find(i => i.menuItem.id === id)
+  if (!item) return
+  item.quantity++
 }
 
-function decreaseItem(idx: number) {
-  if (cartItems.value[idx].quantity <= 1) {
-    cartItems.value.splice(idx, 1)
+function decreaseItem(id: number) {
+  const item = cartItems.value.find(i => i.menuItem.id === id)
+  if (!item) return
+  if (item.quantity > 1) {
+    item.quantity--
   } else {
-    cartItems.value[idx].quantity--
+    cartItems.value = cartItems.value.filter(i => i.menuItem.id !== id)
   }
 }
 
 async function submitOrder() {
   if (!cartItems.value.length) return
+  if (!tableId.value) return
+
   submitting.value = true
+
   try {
     for (const item of cartItems.value) {
       const res = await orderApi.addItem({
-        invoiceId: currentInvoiceId.value,   // null في أول إرسال
+        invoiceId: currentInvoiceId.value,
         tableId: tableId.value,
         customerId: CUSTOMER_ID,
         menuItemId: item.menuItem.id,
@@ -264,16 +313,28 @@ async function submitOrder() {
         notes: item.note || null,
         selectedItemOptions: item.selectedOptions.map(o => o.id),
       })
-      // احفظ الـ invoiceId من أول استجابة
+
       if (!currentInvoiceId.value && res.data?.id) {
         currentInvoiceId.value = res.data.id
       }
     }
 
-    toast.add({ severity: 'success', summary: 'تم الطلب', detail: 'تم إرسال طلبك بنجاح', life: 3000 })
+    toast.add({
+      severity: 'success',
+      summary: 'تم الطلب',
+      detail: 'تم إرسال طلبك بنجاح',
+      life: 3000
+    })
+
     cartItems.value = []
-  } catch {
-    toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل إرسال الطلب', life: 3000 })
+
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'خطأ',
+      detail: 'فشل إرسال الطلب',
+      life: 3000
+    })
   } finally {
     submitting.value = false
   }

@@ -13,11 +13,8 @@ import type {
 } from '../types/api.types'
 
 export const menuApi = {
-  getAll: (): Promise<MenuCategoryApi[]> =>
-    apiClient.get('/menu/all'),
-
-  getCategories: (activeOnly = true): Promise<MenuCategoryApi[]> =>
-    apiClient.get('/menu/categories', { ActiveOnly: activeOnly }),
+  getFullMenu: (): Promise<MenuCategoryApi[]> =>
+    apiClient.get('/menu/all')
 }
 
 export const tableApi = {

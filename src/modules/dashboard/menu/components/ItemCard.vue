@@ -4,11 +4,29 @@
     :class="item.isAvailable ? 'border-200' : 'border-300'"
   >
     <div class="relative" style="height:110px; background:var(--p-surface-100)">
-      <img v-if="item.image" :src="item.image" :alt="item.name"
-        class="w-full h-full" style="object-fit:cover" />
-      <div v-else class="w-full h-full flex align-items-center justify-content-center">
-        <i class="pi pi-image text-4xl text-300" />
+      <img
+        v-if="item.image"
+        :src="item.image"
+        :alt="item.name"
+        class="w-full h-full"
+        style="object-fit:cover"
+        @error="(e) => ((e.target as HTMLImageElement).src = '/defaultImages/defaultFood.jpeg')"
+      />
+      <div v-else class="w-full h-full relative">
+        <img
+          src="/defaultImages/defaultFood.jpeg"
+          alt="صورة غير متوفرة"
+          class="w-full h-full"
+          style="object-fit: cover; opacity: 0.4;"
+        />
+        <span
+          class="absolute text-xs font-medium text-600"
+          style="top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(255,255,255,0.8); padding:2px 8px; border-radius:4px; white-space:nowrap;"
+        >
+          لا توجد صورة
+        </span>
       </div>
+
       <div class="absolute top-0 left-0 m-2">
         <Tag :value="item.isAvailable ? 'متاح' : 'غير متاح'"
           :severity="item.isAvailable ? 'success' : 'secondary'" class="text-xs" />
