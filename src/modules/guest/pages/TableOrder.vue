@@ -1,3 +1,4 @@
+<!-- src/modules/guest/pages/TableOrder.vue -->
 <template>
   <div class="min-h-screen surface-ground" dir="rtl">
 
@@ -5,64 +6,23 @@
     <div class="surface-card shadow-1 px-3 py-3 sticky top-0 z-5">
       <div class="flex align-items-center justify-content-between">
         <div class="flex align-items-center gap-2">
-
-          <!-- زر العودة -->
-          <Button
-            icon="pi pi-arrow-right"
-            text
-            rounded
-            severity="secondary"
-            @click="router.back()"
-          />
-
           <div>
-            <p class="font-bold text-base m-0 line-height-1">{{ table?.name ?? 'مطعمنا' }}</p>
-            <span class="text-color-secondary text-xs">طاولة {{ table?.number }}</span>
+            <p class="font-bold text-base m-0 line-height-1">مطعمنا</p>
+            <span class="text-color-secondary text-xs">طاولة {{ tableId }}</span>
           </div>
         </div>
-
-        <Tag :value="statusLabel" :severity="statusSeverity" class="text-xs" />
-      </div>
-
-      <!-- Reservation Info -->
-      <div
-        v-if="table?.reservation"
-        class="mt-3 p-2 border-round-lg border-1 surface-border bg-orange-100"
-      >
-        <div class="flex align-items-center gap-2 mb-2">
-          <i class="pi pi-calendar text-orange-500 text-xs" />
-          <span class="text-xs font-bold text-orange-500">حجز مسبق</span>
-        </div>
-        <div class="flex flex-wrap gap-3">
-          <div class="flex align-items-center gap-1">
-            <i class="pi pi-user text-color-secondary text-xs" />
-            <span class="text-xs text-color-secondary">{{ table.reservation.guestName }}</span>
-          </div>
-          <div class="flex align-items-center gap-1">
-            <i class="pi pi-clock text-color-secondary text-xs" />
-            <span class="text-xs text-color-secondary">{{ table.reservation.time }}</span>
-          </div>
-          <div class="flex align-items-center gap-1">
-            <i class="pi pi-users text-color-secondary text-xs" />
-            <span class="text-xs text-color-secondary">{{ table.reservation.guestCount }} أشخاص</span>
-          </div>
-        </div>
+        <Tag value="متاحة" severity="success" class="text-xs" />
       </div>
     </div>
 
-    <!-- Table Not Found -->
-    <div v-if="!table" class="flex flex-column align-items-center justify-content-center py-8 gap-3">
-      <i class="pi pi-exclamation-triangle text-5xl text-yellow-500" />
-      <p class="text-color-secondary">الطاولة غير موجودة</p>
-      <Button label="العودة" icon="pi pi-arrow-right" text @click="router.back()" />
+    <!-- Loading -->
+    <div v-if="loading" class="flex justify-content-center align-items-center py-8">
+      <ProgressSpinner />
     </div>
 
     <template v-else>
-
-      <!-- ===== MOBILE (< md) ===== -->
+      <!-- MOBILE -->
       <div class="md:hidden">
-
-        <!-- Categories -->
         <div class="px-3 pt-3">
           <Card class="w-full">
             <template #content>
@@ -75,12 +35,7 @@
           </Card>
         </div>
 
-        <!-- Menu Items -->
         <div class="px-3 py-3 flex flex-column gap-3" style="padding-bottom: 120px;">
-          <div v-if="filteredItems.length === 0" class="text-center py-8">
-            <i class="pi pi-inbox text-5xl text-color-secondary mb-3 block" />
-            <p class="text-color-secondary">لا توجد أصناف في هذه الفئة</p>
-          </div>
           <MenuItemCard
             v-for="item in filteredItems"
             :key="item.id"
@@ -89,26 +44,19 @@
           />
         </div>
 
-        <!-- Cart Fixed Bottom -->
         <div class="fixed bottom-0 left-0 right-0 z-5">
           <OrderCart
-            ref="cartRef"
             :items="cartItems"
             @increase="increaseItem"
             @decrease="decreaseItem"
-            @confirm="confirmOrder"
+            @confirm="submitOrder"
           />
         </div>
-
       </div>
 
-      <!-- ===== TABLET & DESKTOP (>= md) ===== -->
-      <div class="hidden md:flex gap-0" style="height: calc(100vh - 80px);">
-
-        <!-- Right: Menu -->
+      <!-- DESKTOP -->
+      <div class="hidden md:flex gap-0" style="height: calc(100vh - 64px);">
         <div class="flex flex-column flex-1 overflow-hidden">
-
-          <!-- Categories sticky -->
           <div class="px-3 pt-3 pb-2 surface-card shadow-1 z-4" style="position: sticky; top: 0;">
             <MenuCategory
               :categories="categories"
@@ -116,31 +64,17 @@
               @select="selectedCategoryId = $event"
             />
           </div>
-
-          <!-- Items Grid -->
           <div class="overflow-y-auto flex-1 px-3 py-3">
-            <div v-if="filteredItems.length === 0" class="text-center py-8">
-              <i class="pi pi-inbox text-5xl text-color-secondary mb-3 block" />
-              <p class="text-color-secondary">لا توجد أصناف في هذه الفئة</p>
-            </div>
             <div class="grid">
-              <div
-                v-for="item in filteredItems"
-                :key="item.id"
-                class="col-12 lg:col-6 xl:col-4"
-              >
+              <div v-for="item in filteredItems" :key="item.id" class="col-12 lg:col-6 xl:col-4">
                 <MenuItemCard :item="item" @open="openItem" />
               </div>
             </div>
           </div>
-
         </div>
 
-        <!-- Left: Cart Sidebar -->
-        <div
-          class="surface-card border-right-1 surface-border flex flex-column"
-          style="width: 340px; min-width: 300px;"
-        >
+        <!-- Cart Sidebar -->
+        <div class="surface-card border-right-1 surface-border flex flex-column" style="width: 340px;">
           <div class="px-4 py-3 border-bottom-1 surface-border flex align-items-center gap-2">
             <i class="pi pi-shopping-cart text-primary" />
             <span class="font-bold text-lg">السلة</span>
@@ -148,33 +82,28 @@
           </div>
 
           <div class="flex-1 overflow-y-auto px-3 py-2">
-            <div v-if="cartItems.length === 0" class="flex flex-column align-items-center justify-content-center h-full gap-3 py-8">
+            <div v-if="!cartItems.length" class="flex flex-column align-items-center justify-content-center h-full gap-3 py-8">
               <i class="pi pi-shopping-cart text-4xl text-color-secondary" />
               <p class="text-color-secondary text-sm">السلة فارغة</p>
             </div>
 
-            <div v-for="cartItem in cartItems" :key="cartItem.menuItem.id" class="surface-hover border-round-lg p-3 mb-2 border-1 surface-border">
+            <div v-for="(cartItem, idx) in cartItems" :key="idx" class="surface-hover border-round-lg p-3 mb-2 border-1 surface-border">
               <div class="flex align-items-center gap-2 mb-2">
-                <img
-                  :src="cartItem.menuItem.image"
-                  :alt="cartItem.menuItem.name"
-                  class="border-round"
-                  style="width: 48px; height: 48px; object-fit: cover;"
-                />
                 <div class="flex-1">
                   <p class="m-0 font-bold text-sm text-color">{{ cartItem.menuItem.name }}</p>
-                  <p class="m-0 text-xs text-color-secondary" v-if="cartItem.selectedSize">{{ cartItem.selectedSize.name }}</p>
+                  <p v-if="cartItem.selectedOptions.length" class="m-0 text-xs text-color-secondary">
+                    {{ cartItem.selectedOptions.map(o => o.name).join('، ') }}
+                  </p>
+                  <p v-if="cartItem.note" class="m-0 text-xs text-orange-500">📝 {{ cartItem.note }}</p>
                 </div>
               </div>
               <div class="flex align-items-center justify-content-between">
                 <div class="flex align-items-center gap-2">
-                  <Button icon="pi pi-minus" rounded text size="small" @click="decreaseItem(cartItem.menuItem.id)" />
+                  <Button icon="pi pi-minus" rounded text size="small" @click="decreaseItem(idx)" />
                   <span class="font-bold text-sm">{{ cartItem.quantity }}</span>
-                  <Button icon="pi pi-plus" rounded text size="small" @click="increaseItem(cartItem.menuItem.id)" />
+                  <Button icon="pi pi-plus" rounded text size="small" @click="increaseItem(idx)" />
                 </div>
-                <span class="text-primary font-bold text-sm">
-                  {{ (cartItem.menuItem.price + (cartItem.selectedSize?.price || 0)) * cartItem.quantity }} د.ع
-                </span>
+                <span class="text-primary font-bold text-sm">{{ itemTotal(cartItem) }} د.ع</span>
               </div>
             </div>
           </div>
@@ -188,15 +117,13 @@
               label="تأكيد الطلب"
               icon="pi pi-check"
               class="w-full"
-              :disabled="cartItems.length === 0"
-              @click="confirmOrder"
+              :disabled="!cartItems.length || submitting"
+              :loading="submitting"
+              @click="submitOrder"
             />
           </div>
-
         </div>
-
       </div>
-
     </template>
 
     <!-- Dialog -->
@@ -211,116 +138,144 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
-import { tables } from '../../../mock/tables.mock'
-import { categories, menuItems } from '../../../mock/menu.mock'
-import type { CartItem, MenuItem } from '../../../types/menu.types'
-import type { Table } from '../types/guest.types'
+import { menuApi, orderApi } from '../../../services/api.service'
+import type { MenuCategoryApi, MenuItemApi, MenuOptionApi } from '../../../types/api.types'
 import MenuCategory from '../../../components/shared/menu/MenuCategory.vue'
 import MenuItemCard from '../../../components/shared/menu/MenuItem.vue'
 import OrderCart from '../../../components/shared/menu/OrderCart.vue'
+import MenuItemDialog, { type CartItemLocal } from '../../../components/shared/menu/MenuItemDialog.vue'
 import Card from 'primevue/card'
 import Tag from 'primevue/tag'
 import Badge from 'primevue/badge'
 import Button from 'primevue/button'
-import MenuItemDialog from '../../../components/shared/menu/MenuItemDialog.vue'
+import ProgressSpinner from 'primevue/progressspinner'
+
+// ---- الثوابت ----
+const CUSTOMER_ID = 1 // مؤقت — يُستبدل لاحقاً بالـ auth
 
 const route = useRoute()
-const router = useRouter()
 const toast = useToast()
-const cartRef = ref()
 
-const table = ref<Table | null>(null)
-const selectedCategoryId = ref(categories[0].id)
-const cartItems = ref<CartItem[]>([])
+const tableId = computed(() => Number(route.params.id))
+
+const loading = ref(true)
+const submitting = ref(false)
+const allCategories = ref<MenuCategoryApi[]>([])
+const selectedCategoryId = ref<number>(0)
+const cartItems = ref<CartItemLocal[]>([])
 const dialogVisible = ref(false)
-const selectedItem = ref<MenuItem | null>(null)
+const selectedItem = ref<MenuItemApi | null>(null)
 
-onMounted(() => {
-  const id = Number(route.params.id)
-  table.value = tables.find(t => t.id === id) || null
-})
+// invoiceId يُنشأ عند أول إضافة ويُحفظ للإضافات التالية
+const currentInvoiceId = ref<number | null>(null)
 
-const filteredItems = computed(() =>
-  menuItems.filter(item => item.categoryId === selectedCategoryId.value)
+// ---- computed ----
+
+/** الفئات التي تحتوي على items */
+const categories = computed(() =>
+  allCategories.value
+    .filter(c => c.isActive && c.items?.length)
+    .map(c => ({ id: c.id, name: c.name, icon: '🍽️' }))
 )
 
+const filteredItems = computed(() => {
+  const cat = allCategories.value.find(c => c.id === selectedCategoryId.value)
+  return cat?.items?.filter(i => i.isAvailable) ?? []
+})
+
 const totalCartCount = computed(() =>
-  cartItems.value.reduce((sum, i) => sum + i.quantity, 0)
+  cartItems.value.reduce((s, i) => s + i.quantity, 0)
 )
 
 const totalPrice = computed(() =>
-  cartItems.value.reduce((sum, i) => {
-    const base = i.menuItem.price + (i.selectedSize?.price || 0)
-    return sum + base * i.quantity
-  }, 0)
+  cartItems.value.reduce((s, i) => s + itemTotal(i), 0)
 )
 
-const statusLabel = computed(() => {
-  switch (table.value?.status) {
-    case 'available': return 'متاحة'
-    case 'occupied':  return 'مشغولة'
-    case 'reserved':  return 'محجوزة'
-    default: return ''
+// ---- helpers ----
+
+function itemTotal(item: CartItemLocal) {
+  const optionsTotal = item.selectedOptions.reduce((s, o) => s + o.price, 0)
+  return (item.menuItem.price + optionsTotal) * item.quantity
+}
+
+// ---- lifecycle ----
+
+onMounted(async () => {
+  try {
+    const res = await menuApi.getAll()
+    allCategories.value = res.data
+    if (categories.value.length) {
+      selectedCategoryId.value = categories.value[0].id
+    }
+  } catch {
+    toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل تحميل المنيو', life: 3000 })
+  } finally {
+    loading.value = false
   }
 })
 
-const statusSeverity = computed(() => {
-  switch (table.value?.status) {
-    case 'available': return 'success'
-    case 'occupied':  return 'danger'
-    case 'reserved':  return 'warn'
-    default: return 'secondary'
-  }
-})
+// ---- actions ----
 
-function increaseItem(id: number) {
-  const item = cartItems.value.find(i => i.menuItem.id === id)
-  if (item) item.quantity++
-}
-
-function decreaseItem(id: number) {
-  const index = cartItems.value.findIndex(i => i.menuItem.id === id)
-  if (index === -1) return
-  if (cartItems.value[index].quantity === 1) {
-    cartItems.value.splice(index, 1)
-  } else {
-    cartItems.value[index].quantity--
-  }
-}
-
-function confirmOrder() {
-  cartItems.value = []
-  toast.add({
-    severity: 'success',
-    summary: 'تم إرسال الطلب 🎉',
-    detail: 'سيصلك طلبك قريباً',
-    life: 3000,
-  })
-}
-
-function openItem(item: MenuItem) {
+function openItem(item: MenuItemApi) {
   selectedItem.value = item
   dialogVisible.value = true
 }
 
-function onDialogAdd(cartItem: CartItem) {
-  const existing = cartItems.value.find(
-    i => i.menuItem.id === cartItem.menuItem.id &&
-    i.selectedSize?.id === cartItem.selectedSize?.id
+function onDialogAdd(cartItem: CartItemLocal) {
+  // ابحث عن نفس الصنف مع نفس الخيارات
+  const existingIdx = cartItems.value.findIndex(c =>
+    c.menuItem.id === cartItem.menuItem.id &&
+    JSON.stringify(c.selectedOptions.map(o => o.id).sort()) ===
+    JSON.stringify(cartItem.selectedOptions.map(o => o.id).sort()) &&
+    c.note === cartItem.note
   )
-  if (existing) {
-    existing.quantity++
+  if (existingIdx !== -1) {
+    cartItems.value[existingIdx].quantity += cartItem.quantity
   } else {
     cartItems.value.push(cartItem)
   }
-  cartRef.value?.closeDrawer()
-  toast.add({
-    severity: 'success',
-    summary: 'تمت الإضافة',
-    detail: `تم إضافة ${cartItem.menuItem.name} للسلة`,
-    life: 2000,
-  })
+}
+
+function increaseItem(idx: number) {
+  cartItems.value[idx].quantity++
+}
+
+function decreaseItem(idx: number) {
+  if (cartItems.value[idx].quantity <= 1) {
+    cartItems.value.splice(idx, 1)
+  } else {
+    cartItems.value[idx].quantity--
+  }
+}
+
+async function submitOrder() {
+  if (!cartItems.value.length) return
+  submitting.value = true
+  try {
+    for (const item of cartItems.value) {
+      const res = await orderApi.addItem({
+        invoiceId: currentInvoiceId.value,   // null في أول إرسال
+        tableId: tableId.value,
+        customerId: CUSTOMER_ID,
+        menuItemId: item.menuItem.id,
+        quantity: item.quantity,
+        notes: item.note || null,
+        selectedItemOptions: item.selectedOptions.map(o => o.id),
+      })
+      // احفظ الـ invoiceId من أول استجابة
+      if (!currentInvoiceId.value && res.data?.id) {
+        currentInvoiceId.value = res.data.id
+      }
+    }
+
+    toast.add({ severity: 'success', summary: 'تم الطلب', detail: 'تم إرسال طلبك بنجاح', life: 3000 })
+    cartItems.value = []
+  } catch {
+    toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل إرسال الطلب', life: 3000 })
+  } finally {
+    submitting.value = false
+  }
 }
 </script>

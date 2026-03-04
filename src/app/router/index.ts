@@ -29,13 +29,15 @@ const routes: RouteRecordRaw[] = [
     path: '/waiter',
     name: 'waiter-home',
     component: () => import('../../modules/waiter/pages/WaiterHome.vue'),
-    meta: { requiresAuth: true, roles: ['Waiter'] },
+    //meta: { requiresAuth: true, roles: ['Waiter'] },
+    meta: { public: true },
   },
   {
     path: '/cashier',
     name: 'cashier-home',
     component: () => import('../../modules/cashier/pages/CashierHome.vue'),
-    meta: { requiresAuth: true, roles: ['Cashier'] },
+    //meta: { requiresAuth: true, roles: ['Cashier'] },
+    meta: { public: true },
   },
 
   // ── الأدمن مع AdminLayout ──────────────────────────

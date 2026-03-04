@@ -5,10 +5,8 @@
     <header class="surface-card shadow-1 sticky top-0 z-5 border-bottom-1 border-200">
       <div class="px-3 py-3">
 
-        <!-- Row 1: Logo + Time -->
         <div class="flex align-items-center justify-content-between mb-3">
           <div class="flex align-items-center gap-2">
-
             <div class="w-2rem h-2rem border-round-lg bg-primary flex align-items-center justify-content-center">
               <i class="pi pi-shop text-white text-sm"></i>
             </div>
@@ -17,10 +15,8 @@
               <span class="text-xs text-500">الويتر</span>
             </div>
           </div>
-          
 
           <div class="flex align-items-center gap-2">
-            <!-- Alerts Bell -->
             <Button
               v-if="alertsCount > 0"
               icon="pi pi-bell"
@@ -39,7 +35,6 @@
           </div>
         </div>
 
-        <!-- Stats Bar -->
         <TableStatsBar
           :available="availableCount"
           :occupied="occupiedCount"
@@ -53,7 +48,6 @@
     <!-- Main -->
     <main class="px-3 pt-3 pb-6">
 
-      <!-- Toolbar -->
       <div class="flex align-items-center justify-content-between mb-3">
         <div class="flex align-items-center gap-2">
           <span class="font-bold text-800 text-sm">الطاولات</span>
@@ -81,8 +75,12 @@
         />
       </div>
 
-      <!-- Empty State -->
-      <Transition name="fade" mode="out-in">
+      <!-- Loading -->
+      <div v-if="loading" class="flex justify-content-center align-items-center py-8">
+        <ProgressSpinner />
+      </div>
+
+      <Transition v-else name="fade" mode="out-in">
         <div
           v-if="filteredTables.length === 0"
           class="flex flex-column align-items-center justify-content-center py-8 gap-3"
@@ -92,7 +90,6 @@
           <Button label="عرض الكل" text size="small" @click="activeFilter = null" />
         </div>
 
-        <!-- Grid -->
         <TableGrid v-else :tables="filteredTables" @select="onTableSelect" />
       </Transition>
 
@@ -140,62 +137,92 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useWaiterStore } from '../store/waiter.store'
-import { useAuthStore } from '../../auth/store/auth.store'
 import { useToast } from 'primevue/usetoast'
-import type { Table, TableAlert, TableStatusUI } from '../types/waiter.types'
+import { tableApi } from '../../../services/api.service'
+import type { Table, TableAlert } from '../types/waiter.types'
 import TableGrid from '../components/TableGrid.vue'
 import TableStatsBar from '../components/TableStatsBar.vue'
+import LogoutButton from '../../../components/shared/Logoutbutton.vue'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
-import LogoutButton from '../../../components/shared/Logoutbutton.vue';
+import ProgressSpinner from 'primevue/progressspinner'
 
-const router     = useRouter()
-const waiter     = useWaiterStore()
-const auth       = useAuthStore()
-const toast      = useToast()
+const router = useRouter()
+const toast  = useToast()
 
 const currentTime  = ref('')
-const activeFilter = ref<TableStatusUI | null>(null)
+const activeFilter = ref<Table['status'] | null>(null)
 const isRefreshing = ref(false)
 const showAlerts   = ref(false)
+const loading      = ref(true)
+const tables       = ref<Table[]>([])
+
 let timer: ReturnType<typeof setInterval>
 
-// ── Lifecycle ──────────────────────────────────────────
 onMounted(async () => {
   updateTime()
   timer = setInterval(updateTime, 1000)
-  await waiter.fetchTables()
+  await loadTables()
 })
 onUnmounted(() => clearInterval(timer))
 
-// ── Time ───────────────────────────────────────────────
-function updateTime() {
-  currentTime.value = new Date().toLocaleTimeString('ar-IQ', {
-    hour: '2-digit', minute: '2-digit'
-  })
+async function loadTables() {
+  loading.value = true
+  try {
+    const res = await tableApi.getAll()
+    tables.value = res.map((t: any) => ({
+      id:          t.id,
+      name:        `طاولة ${t.number}`,
+      number:      t.number,
+      capacity:    t.capacity,
+      status:      mapStatus(t.status),
+      reservation: null,
+      alerts:      [],
+    }))
+  } catch {
+    toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل تحميل الطاولات', life: 3000 })
+  } finally {
+    loading.value = false
+  }
 }
 
-// ── Refresh ────────────────────────────────────────────
+function mapStatus(status: number): Table['status'] {
+  switch (status) {
+    case 1:  return 'occupied'
+    case 2:  return 'reserved'
+    default: return 'available'
+  }
+}
+
 async function refresh() {
   isRefreshing.value = true
-  await waiter.fetchTables()
+  await loadTables()
   isRefreshing.value = false
   toast.add({ severity: 'success', summary: 'تم التحديث', life: 1500 })
 }
 
-// ── Computed من الـ Store ──────────────────────────────
-const availableCount = computed(() => waiter.availableCount)
-const occupiedCount  = computed(() => waiter.occupiedCount)
-const reservedCount  = computed(() => waiter.reservedCount)
-const filteredTables = computed(() => waiter.filteredTables(activeFilter.value))
+function updateTime() {
+  currentTime.value = new Date().toLocaleTimeString('ar-IQ', {
+    hour: '2-digit', minute: '2-digit',
+  })
+}
+
+const availableCount = computed(() => tables.value.filter(t => t.status === 'available').length)
+const occupiedCount  = computed(() => tables.value.filter(t => t.status === 'occupied').length)
+const reservedCount  = computed(() => tables.value.filter(t => t.status === 'reserved').length)
+
+const filteredTables = computed(() =>
+  activeFilter.value
+    ? tables.value.filter(t => t.status === activeFilter.value)
+    : tables.value
+)
 
 const tablesWithAlerts = computed(() =>
-  waiter.tables.filter(t => t.alerts.length > 0)
+  tables.value.filter(t => t.alerts && t.alerts.length > 0)
 )
 const alertsCount = computed(() =>
-  waiter.tables.reduce((sum, t) => sum + t.alerts.length, 0)
+  tables.value.reduce((sum, t) => sum + (t.alerts?.length ?? 0), 0)
 )
 
 const filterLabel = computed(() => {
@@ -207,8 +234,7 @@ const filterLabel = computed(() => {
   }
 })
 
-// ── Events ─────────────────────────────────────────────
-function onFilter(status: TableStatusUI) {
+function onFilter(status: Table['status']) {
   activeFilter.value = activeFilter.value === status ? null : status
 }
 
@@ -216,11 +242,6 @@ function onTableSelect(table: Table) {
   router.push(`/waiter/table/${table.id}`)
 }
 
-function logout() {
-  auth.logout()
-}
-
-// ── Alert Helpers ──────────────────────────────────────
 function alertIcon(alert: TableAlert) {
   switch (alert) {
     case 'confirm_order': return 'pi pi-check-circle text-orange-500'
