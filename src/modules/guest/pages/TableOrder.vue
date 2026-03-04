@@ -27,7 +27,7 @@
           <Card class="w-full">
             <template #content>
               <MenuCategory
-                :categories="categories"
+                :categories="activeCategories"
                 :selected-id="selectedCategoryId"
                 @select="selectedCategoryId = $event"
               />
@@ -35,7 +35,7 @@
           </Card>
         </div>
 
-        <div class="px-3 py-3 flex flex-column gap-3 " style="padding-bottom: 120px;">
+        <div class="px-3 py-3 flex flex-column gap-3" style="padding-bottom: 120px;">
           <MenuItemCard
             v-for="item in filteredItems"
             :key="item.id"
@@ -46,6 +46,7 @@
 
         <div class="fixed bottom-0 left-0 right-0 z-5">
           <OrderCart
+            ref="cartRef"
             :items="cartItems"
             @increase="increaseItem"
             @decrease="decreaseItem"
@@ -59,12 +60,11 @@
         <div class="flex flex-column flex-1 overflow-hidden">
           <div class="px-3 pt-3 pb-2 surface-card shadow-1 z-4" style="position: sticky; top: 0;">
             <MenuCategory
-              v-if="allCategories.length"
-              :categories="categories"
+              v-if="activeCategories.length"
+              :categories="activeCategories"
               :selected-id="selectedCategoryId"
               @select="selectedCategoryId = $event"
             />
-            {{ console.log(allCategories) }}
           </div>
           <div class="overflow-y-auto flex-1 px-3 py-3">
             <div class="grid">
@@ -101,9 +101,9 @@
               </div>
               <div class="flex align-items-center justify-content-between">
                 <div class="flex align-items-center gap-2">
-                  <Button icon="pi pi-minus" rounded text size="small" @click="decreaseItem(idx)" />
+                  <Button icon="pi pi-minus" rounded text size="small" @click="decreaseItem(cartItem.menuItem.id)" />
                   <span class="font-bold text-sm">{{ cartItem.quantity }}</span>
-                  <Button icon="pi pi-plus" rounded text size="small" @click="increaseItem(idx)" />
+                  <Button icon="pi pi-plus" rounded text size="small" @click="increaseItem(cartItem.menuItem.id)" />
                 </div>
                 <span class="text-primary font-bold text-sm">{{ itemTotal(cartItem) }} د.ع</span>
               </div>
@@ -128,12 +128,63 @@
       </div>
     </template>
 
-    <!-- Dialog -->
+    <!-- Dialog إضافة منتج -->
     <MenuItemDialog
       v-model="dialogVisible"
       :item="selectedItem"
       @add="onDialogAdd"
     />
+
+    <!-- Dialog نجاح الطلب -->
+    <Dialog
+      v-model:visible="successVisible"
+      :modal="true"
+      :draggable="false"
+      :closable="false"
+      :style="{ width: '320px' }"
+      dir="rtl"
+    >
+      <template #container>
+        <div class="flex flex-column align-items-center p-5 gap-3 surface-card border-round-xl text-center">
+          <div class="w-5rem h-5rem border-round-full bg-green-100 flex align-items-center justify-content-center">
+            <i class="pi pi-check text-green-600 text-4xl" />
+          </div>
+          <p class="font-bold text-xl m-0 text-900">تم إرسال طلبك!</p>
+          <p class="text-color-secondary text-sm m-0 line-height-3">
+            سيقوم الويتر بتأكيد طلبك قريباً
+          </p>
+
+          <!-- ملخص الطلب المرسل -->
+          <div class="w-full surface-50 border-round-lg p-3 border-1 surface-border text-right">
+            <p class="text-xs font-bold text-500 m-0 mb-2">طلبك الحالي</p>
+            <div
+              v-for="item in cartItems"
+              :key="item.menuItem.id"
+              class="flex justify-content-between align-items-center py-1"
+            >
+              <span class="text-sm text-900">{{ item.menuItem.name }}</span>
+              <div class="flex align-items-center gap-2">
+                <span class="text-xs text-500">x{{ item.quantity }}</span>
+                <span class="text-xs font-bold text-primary">{{ itemTotal(item) }} د.ع</span>
+              </div>
+            </div>
+            <div class="border-top-1 surface-border mt-2 pt-2 flex justify-content-between">
+              <span class="text-sm font-bold text-900">الإجمالي</span>
+              <span class="text-sm font-bold text-primary">{{ totalPrice }} د.ع</span>
+            </div>
+          </div>
+
+          <Button
+            label="إضافة المزيد"
+            icon="pi pi-plus"
+            class="w-full mt-1"
+            severity="secondary"
+            outlined
+            @click="successVisible = false"
+          />
+        </div>
+      </template>
+    </Dialog>
 
   </div>
 </template>
@@ -151,65 +202,54 @@ import MenuItemCard from '../../../components/shared/menu/MenuItem.vue'
 import OrderCart from '../../../components/shared/menu/OrderCart.vue'
 import MenuItemDialog from '../../../components/shared/menu/MenuItemDialog.vue'
 
-//PRIMVUE IMPORTS
 import Card from 'primevue/card'
 import Tag from 'primevue/tag'
 import Badge from 'primevue/badge'
 import Button from 'primevue/button'
+import Dialog from 'primevue/dialog'
 import ProgressSpinner from 'primevue/progressspinner'
 
-// ---- الثوابت ----
-const CUSTOMER_ID = 1 // مؤقت — يُستبدل لاحقاً بالـ auth
+// ── ثوابت ──────────────────────────────────────────────
+const CUSTOMER_ID = 1 // زبون عشوائي دائماً
 
-// ---- composables ----
+// ── composables ────────────────────────────────────────
 const route = useRoute()
 const toast = useToast()
 
-// ---- state ----
-const loading = ref(true)
-const submitting = ref(false)
+// ── state ──────────────────────────────────────────────
+const loading        = ref(true)
+const submitting     = ref(false)
+const successVisible = ref(false)
 
-const allCategories = ref<MenuCategoryApi[]>([])
-const selectedCategoryId = ref<number | null>(0)
+const allCategories      = ref<MenuCategoryApi[]>([])
+const selectedCategoryId = ref<number | null>(null)
 
-const cartItems = ref<CartItemLocal[]>([])
+const cartItems     = ref<CartItemLocal[]>([])
 const dialogVisible = ref(false)
-const selectedItem = ref<MenuItemApi | null>(null)
+const selectedItem  = ref<MenuItemApi | null>(null)
+const cartRef       = ref()
 
+// invoiceId يُحفظ بعد أول طلب ناجح لإضافة باقي الأصناف لنفس الفاتورة
 const currentInvoiceId = ref<number | null>(null)
 
-// ---- computed ----
-
+// ── computed ───────────────────────────────────────────
 const tableId = computed(() => {
   const id = Number(route.params.id)
   return isNaN(id) ? null : id
 })
 
-/** الفئات الفعالة التي تحتوي على عناصر */
-const categories = computed(() => {
-  return Array.isArray(allCategories.value)
-    ? allCategories.value
-        .filter(c => c.isActive && Array.isArray(c.menuItems) && c.menuItems.length > 0)
-        .map(c => ({
-          id: c.id,
-          name: c.name,
-          icon: '🍽️'
-        }))
-    : []
+/** الفئات الفعالة التي تحتوي على عناصر متاحة */
+const activeCategories = computed<MenuCategoryApi[]>(() => {
+  return allCategories.value.filter(
+    c => c.isActive && c.menuItems?.some(i => i.isAvailable)
+  )
 })
 
-/** العناصر حسب الفئة المختارة */
-const filteredItems = computed(() => {
-  if (!Array.isArray(allCategories.value)) return []
+/** العناصر المتاحة للفئة المختارة */
+const filteredItems = computed<MenuItemApi[]>(() => {
   if (!selectedCategoryId.value) return []
-
-  const cat = allCategories.value.find(
-    c => c.id === Number(selectedCategoryId.value)
-  )
-
-  if (!cat || !Array.isArray(cat.menuItems)) return []
-
-  return cat.menuItems.filter(i => i.isAvailable)
+  const cat = allCategories.value.find(c => c.id === selectedCategoryId.value)
+  return cat?.menuItems?.filter(i => i.isAvailable) ?? []
 })
 
 const totalCartCount = computed(() =>
@@ -220,51 +260,42 @@ const totalPrice = computed(() =>
   cartItems.value.reduce((s, i) => s + itemTotal(i), 0)
 )
 
-// ---- helpers ----
-
+// ── helpers ────────────────────────────────────────────
 function itemTotal(item: CartItemLocal) {
-  const optionsTotal = item.selectedOptions.reduce(
-    (s, o) => s + o.price,
-    0
-  )
+  const optionsTotal = item.selectedOptions.reduce((s, o) => s + o.price, 0)
   return (item.menuItem.price + optionsTotal) * item.quantity
 }
 
-// ---- lifecycle ----
-
+// ── lifecycle ──────────────────────────────────────────
 onMounted(async () => {
   try {
     const res = await menuApi.getFullMenu()
-    console.log(res)
-    // تأكد أن البيانات Array
     allCategories.value = Array.isArray(res) ? res : []
 
     // اختر أول فئة فعالة تلقائياً
-    if (categories.value.length > 0) {
-      selectedCategoryId.value = categories.value[0].id
+    if (activeCategories.value.length > 0) {
+      selectedCategoryId.value = activeCategories.value[0].id
     }
-
-
-  } catch (error) {
+  } catch {
     toast.add({
       severity: 'error',
       summary: 'خطأ',
-      detail: 'فشل تحميل المنيو',
-      life: 3000
+      detail: 'فشل تحميل المنيو، يرجى تحديث الصفحة',
+      life: 4000,
     })
   } finally {
     loading.value = false
   }
 })
 
-// ---- actions ----
-
+// ── actions ────────────────────────────────────────────
 function openItem(item: MenuItemApi) {
   selectedItem.value = item
   dialogVisible.value = true
 }
 
 function onDialogAdd(cartItem: CartItemLocal) {
+  // إذا نفس المنتج بنفس الخيارات والملاحظة → زد الكمية فقط
   const existingIdx = cartItems.value.findIndex(c =>
     c.menuItem.id === cartItem.menuItem.id &&
     JSON.stringify(c.selectedOptions.map(o => o.id).sort()) ===
@@ -279,61 +310,54 @@ function onDialogAdd(cartItem: CartItemLocal) {
   }
 }
 
-// ✅ صحيح - البحث عبر menuItem.id
 function increaseItem(id: number) {
   const item = cartItems.value.find(i => i.menuItem.id === id)
-  if (!item) return
-  item.quantity++
+  if (item) item.quantity++
 }
 
 function decreaseItem(id: number) {
-  const item = cartItems.value.find(i => i.menuItem.id === id)
-  if (!item) return
-  if (item.quantity > 1) {
-    item.quantity--
+  const idx = cartItems.value.findIndex(i => i.menuItem.id === id)
+  if (idx === -1) return
+  if (cartItems.value[idx].quantity > 1) {
+    cartItems.value[idx].quantity--
   } else {
-    cartItems.value = cartItems.value.filter(i => i.menuItem.id !== id)
+    cartItems.value.splice(idx, 1)
   }
 }
 
 async function submitOrder() {
-  if (!cartItems.value.length) return
-  if (!tableId.value) return
+  if (!cartItems.value.length || !tableId.value) return
 
   submitting.value = true
 
   try {
     for (const item of cartItems.value) {
       const res = await orderApi.addItem({
-        invoiceId: currentInvoiceId.value,
-        tableId: tableId.value,
-        customerId: CUSTOMER_ID,
-        menuItemId: item.menuItem.id,
-        quantity: item.quantity,
-        notes: item.note || null,
+        invoiceId:           currentInvoiceId.value,  // null في أول طلب
+        tableId:             tableId.value,
+        customerId:          CUSTOMER_ID,
+        menuItemId:          item.menuItem.id,
+        quantity:            item.quantity,
+        notes:               item.note || null,
         selectedItemOptions: item.selectedOptions.map(o => o.id),
       })
 
-      if (!currentInvoiceId.value && res.data?.id) {
-        currentInvoiceId.value = res.data.id
+      // احفظ الـ invoiceId من أول رد لإضافة باقي الأصناف لنفس الفاتورة
+      if (!currentInvoiceId.value && res?.id) {
+        currentInvoiceId.value = res.id
       }
     }
 
-    toast.add({
-      severity: 'success',
-      summary: 'تم الطلب',
-      detail: 'تم إرسال طلبك بنجاح',
-      life: 3000
-    })
+    // أغلق الدرّاور وأظهر رسالة النجاح — السلة تبقى كما هي
+    cartRef.value?.closeDrawer()
+    successVisible.value = true
 
-    cartItems.value = []
-
-  } catch (error) {
+  } catch {
     toast.add({
       severity: 'error',
       summary: 'خطأ',
-      detail: 'فشل إرسال الطلب',
-      life: 3000
+      detail: 'فشل إرسال الطلب، حاول مرة أخرى',
+      life: 3000,
     })
   } finally {
     submitting.value = false

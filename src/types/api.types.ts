@@ -12,15 +12,6 @@ export interface MenuOptionApi {
   price: number
 }
 
-export interface MenuCategoryApi {
-  id: number
-  name: string
-  image?: string | null
-  isActive: boolean
-  printerId?: number | null
-  items?: MenuItemApi[]
-}
-
 export interface MenuItemApi {
   id: number
   name: string
@@ -28,7 +19,17 @@ export interface MenuItemApi {
   price: number
   isAvailable: boolean
   categoryId: number
-  options?: MenuOptionApi[]
+  image?: string | null        // ← أضفناها
+  menuOptions?: MenuOptionApi[] // ← أضفناها (الـ API يرجعها بهذا الاسم)
+}
+
+export interface MenuCategoryApi {
+  id: number
+  name: string
+  image?: string | null
+  isActive: boolean
+  printerId?: number | null
+  menuItems?: MenuItemApi[]    // ← صححنا من items إلى menuItems
 }
 
 export interface TableApi {
@@ -72,7 +73,36 @@ export interface AddInvoiceItemRequestDto {
   selectedItemOptions?: number[]
 }
 
+export interface EditOrderRequestDto {
+  invoiceId: number
+  customerId: number
+  orderType: OrderTypes
+  discountType: DiscountType
+  discount?: number | null
+  notes?: string | null
+}
+
+export interface CheckoutRequestDto {
+  invoiceId: number
+  cashBoxSessionId?: number | null
+  paymentMethod: PaymentMethod
+  amountPaid: number
+  notes?: string | null
+}
+
 export interface VoidItemRequestDto {
   invoiceItemId: number
   voidReason?: string | null
+}
+
+export interface TransferItemsRequestDto {
+  sourceTableId: number
+  targetTableId: number
+  targetInvoiceId?: number | null
+  invoiceItemIds?: number[]
+}
+
+export interface MoveInvoiceRequestDto {
+  targetTableId: number
+  invoiceId: number
 }

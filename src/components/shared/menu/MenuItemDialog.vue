@@ -22,6 +22,7 @@
         :alt="item.name"
         class="w-full border-round-lg mb-3"
         style="height: 200px; object-fit: cover;"
+        @error="(e) => ((e.target as HTMLImageElement).src = '/defaultImages/defaultFood.jpeg')"
       />
 
       <!-- Description -->
@@ -29,12 +30,12 @@
         {{ item.description }}
       </p>
 
-      <!-- Options (sizes, extras, removable — كلها options من الـ API) -->
-      <div v-if="item.options?.length" class="mb-4">
+      <!-- Options (menuOptions من الـ API) -->
+      <div v-if="item.menuOptions?.length" class="mb-4">
         <p class="font-bold text-sm mb-2 m-0 text-color">الخيارات والإضافات</p>
         <div class="flex flex-column gap-2">
           <div
-            v-for="option in item.options"
+            v-for="option in item.menuOptions"
             :key="option.id"
             class="flex align-items-center justify-content-between surface-card border-round-lg px-3 py-2 border-1 cursor-pointer transition-all"
             :class="isSelected(option.id) ? 'border-primary bg-primary-50' : 'surface-border'"
@@ -121,6 +122,7 @@ const selectedOptions = ref<MenuOptionApi[]>([])
 const note = ref('')
 const qty = ref(1)
 
+// إعادة تعيين عند تغيير المنتج
 watch(() => props.item, () => {
   selectedOptions.value = []
   note.value = ''
