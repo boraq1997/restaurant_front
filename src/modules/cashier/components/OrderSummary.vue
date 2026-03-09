@@ -29,7 +29,7 @@
           @click="toggleItem(cartItem.menuItem.id)"
         >
           <img
-            :src="cartItem.menuItem.image"
+            :src="cartItem.menuItem.image || DEFAULT_IMAGE"
             :alt="cartItem.menuItem.name"
             class="border-round flex-shrink-0"
             style="width: 48px; height: 48px; object-fit: cover;"
@@ -54,82 +54,82 @@
         </div>
 
         <!-- التفاصيل عند الضغط -->
-<Transition name="expand">
-  <div
-    v-if="expandedItems.includes(cartItem.menuItem.id)"
-    class="px-3 pb-3 flex flex-column gap-2 border-top-1 surface-border pt-2"
-  >
+        <Transition name="expand">
+          <div
+            v-if="expandedItems.includes(cartItem.menuItem.id)"
+            class="px-3 pb-3 flex flex-column gap-2 border-top-1 surface-border pt-2"
+          >
 
-    <!-- تفاصيل السعر -->
-    <div class="flex flex-column gap-1 p-2 surface-100 border-round-lg">
-      <div class="flex justify-content-between align-items-center">
-        <span class="text-xs text-500">السعر الأساسي</span>
-        <span class="text-xs font-medium text-700">
-          {{ (cartItem.menuItem.price + (cartItem.selectedSize?.price ?? 0)).toLocaleString() }} د.ع
-        </span>
-      </div>
-      <div
-        v-if="cartItem.selectedSize"
-        class="flex justify-content-between align-items-center"
-      >
-        <span class="text-xs text-500">الحجم ({{ cartItem.selectedSize.name }})</span>
-        <span class="text-xs font-medium text-700">
-          {{ cartItem.selectedSize.price > 0 ? `+ ${cartItem.selectedSize.price.toLocaleString()} د.ع` : 'مجاني' }}
-        </span>
-      </div>
-      <template v-if="cartItem.selectedExtras?.length">
-        <div
-          v-for="extra in cartItem.selectedExtras"
-          :key="extra.extra.id"
-          class="flex justify-content-between align-items-center"
-        >
-          <span class="text-xs text-500">{{ extra.extra.name }} x{{ extra.quantity }}</span>
-          <span class="text-xs font-medium text-700">
-            {{ extra.extra.price > 0 ? `+ ${(extra.extra.price * extra.quantity).toLocaleString()} د.ع` : 'مجاني' }}
-          </span>
-        </div>
-      </template>
-      <Divider class="my-1" />
-      <div class="flex justify-content-between align-items-center">
-        <span class="text-xs font-bold text-900">المجموع x{{ cartItem.quantity }}</span>
-        <span class="text-xs font-bold text-primary">
-          {{ itemTotal(cartItem).toLocaleString() }} د.ع
-        </span>
-      </div>
-    </div>
+            <!-- تفاصيل السعر -->
+            <div class="flex flex-column gap-1 p-2 surface-100 border-round-lg">
+              <div class="flex justify-content-between align-items-center">
+                <span class="text-xs text-500">السعر الأساسي</span>
+                <span class="text-xs font-medium text-700">
+                  {{ (cartItem.menuItem.price + (cartItem.selectedSize?.price ?? 0)).toLocaleString() }} د.ع
+                </span>
+              </div>
+              <div
+                v-if="cartItem.selectedSize"
+                class="flex justify-content-between align-items-center"
+              >
+                <span class="text-xs text-500">الحجم ({{ cartItem.selectedSize.name }})</span>
+                <span class="text-xs font-medium text-700">
+                  {{ cartItem.selectedSize.price > 0 ? `+ ${cartItem.selectedSize.price.toLocaleString()} د.ع` : 'مجاني' }}
+                </span>
+              </div>
+              <template v-if="cartItem.selectedExtras?.length">
+                <div
+                  v-for="extra in cartItem.selectedExtras"
+                  :key="extra.extra.id"
+                  class="flex justify-content-between align-items-center"
+                >
+                  <span class="text-xs text-500">{{ extra.extra.name }} x{{ extra.quantity }}</span>
+                  <span class="text-xs font-medium text-700">
+                    {{ extra.extra.price > 0 ? `+ ${(extra.extra.price * extra.quantity).toLocaleString()} د.ع` : 'مجاني' }}
+                  </span>
+                </div>
+              </template>
+              <Divider class="my-1" />
+              <div class="flex justify-content-between align-items-center">
+                <span class="text-xs font-bold text-900">المجموع x{{ cartItem.quantity }}</span>
+                <span class="text-xs font-bold text-primary">
+                  {{ itemTotal(cartItem).toLocaleString() }} د.ع
+                </span>
+              </div>
+            </div>
 
-    <!-- إزالات -->
-    <div v-if="cartItem.removedItems?.length">
-      <p class="text-xs font-bold text-color-secondary m-0 mb-1">إزالة</p>
-      <div class="flex flex-wrap gap-1">
-        <span
-          v-for="removed in cartItem.removedItems"
-          :key="removed.id"
-          class="text-xs bg-red-50 text-red-500 px-2 py-1 border-round"
-        >
-          - {{ removed.name }}
-        </span>
-      </div>
-    </div>
+            <!-- إزالات -->
+            <div v-if="cartItem.removedItems?.length">
+              <p class="text-xs font-bold text-color-secondary m-0 mb-1">إزالة</p>
+              <div class="flex flex-wrap gap-1">
+                <span
+                  v-for="removed in cartItem.removedItems"
+                  :key="removed.id"
+                  class="text-xs bg-red-50 text-red-500 px-2 py-1 border-round"
+                >
+                  - {{ removed.name }}
+                </span>
+              </div>
+            </div>
 
-    <!-- ملاحظة -->
-    <div v-if="cartItem.note">
-      <p class="text-xs font-bold text-color-secondary m-0 mb-1">ملاحظة</p>
-      <p class="text-xs text-700 m-0 p-2 surface-100 border-round">
-        {{ cartItem.note }}
-      </p>
-    </div>
+            <!-- ملاحظة -->
+            <div v-if="cartItem.note">
+              <p class="text-xs font-bold text-color-secondary m-0 mb-1">ملاحظة</p>
+              <p class="text-xs text-700 m-0 p-2 surface-100 border-round">
+                {{ cartItem.note }}
+              </p>
+            </div>
 
-    <!-- لا توجد تفاصيل -->
-    <div
-      v-if="!cartItem.selectedExtras?.length && !cartItem.removedItems?.length && !cartItem.note && !cartItem.selectedSize"
-      class="text-xs text-400 text-center py-1"
-    >
-      لا توجد تفاصيل إضافية
-    </div>
+            <!-- لا توجد تفاصيل -->
+            <div
+              v-if="!cartItem.selectedExtras?.length && !cartItem.removedItems?.length && !cartItem.note && !cartItem.selectedSize"
+              class="text-xs text-400 text-center py-1"
+            >
+              لا توجد تفاصيل إضافية
+            </div>
 
-  </div>
-</Transition>
+          </div>
+        </Transition>
 
       </div>
     </div>
@@ -155,6 +155,10 @@ import type { CashierTable } from '../types/cashier.types'
 import type { CartItem } from '../../../types/menu.types'
 
 const props = defineProps<{ table: CashierTable }>()
+
+// ── الصورة الافتراضية ─────────────────────────────────────────────────────────
+// غيّر المسار حسب موقع الصورة في مجلد public
+const DEFAULT_IMAGE = '/public/defaultImages/defaultFood.jpeg'
 
 const expandedItems = ref<number[]>([])
 
@@ -183,7 +187,10 @@ function itemTotal(cartItem: CartItem) {
 
 function onImageError(e: Event) {
   const img = e.target as HTMLImageElement
-  img.src = 'https://placehold.co/48x48?text=صورة'
+  // منع الـ infinite loop: إذا فشلت الصورة الافتراضية نفسها نوقف المحاولة
+  if (img.dataset.fallback === '1') return
+  img.dataset.fallback = '1'
+  img.src = DEFAULT_IMAGE
 }
 </script>
 

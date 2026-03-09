@@ -173,7 +173,7 @@ async function loadTables() {
   loading.value = true
   try {
     const res = await tableApi.getAll()
-    tables.value = res.map((t: any) => ({
+    tables.value = (res.items ?? res).map((t: any) => ({
       id:          t.id,
       name:        `طاولة ${t.number}`,
       number:      t.number,
