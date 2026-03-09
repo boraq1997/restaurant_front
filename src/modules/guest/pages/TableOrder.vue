@@ -8,7 +8,7 @@
         <div class="flex align-items-center gap-2">
           <div>
             <p class="font-bold text-base m-0 line-height-1">مطعمنا</p>
-            <span class="text-color-secondary text-xs">طاولة {{ tableId }}</span>
+            <span class="text-color-secondary text-xs">طاولة {{ tableNumber }}</span>
           </div>
         </div>
         <Tag value="متاحة" severity="success" class="text-xs" />
@@ -193,8 +193,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
-import { menuApi, orderApi } from '../../../services/api.service'
-import type { MenuCategoryApi, MenuItemApi } from '../../../types/api.types'
+import { menuApi, orderApi, tableApi } from '../../../services/api.service'
+import type { MenuCategoryApi, MenuItemApi, TableApi } from '../../../types/api.types'
 import type { CartItemLocal } from '../../../components/shared/menu/MenuItemDialog.vue'
 
 import MenuCategory from '../../../components/shared/menu/MenuCategory.vue'
@@ -210,7 +210,7 @@ import Dialog from 'primevue/dialog'
 import ProgressSpinner from 'primevue/progressspinner'
 
 // ── ثوابت ──────────────────────────────────────────────
-const CUSTOMER_ID = 1 // زبون عشوائي دائماً
+const CUSTOMER_ID = 1
 
 // ── composables ────────────────────────────────────────
 const route = useRoute()
@@ -221,31 +221,26 @@ const loading        = ref(true)
 const submitting     = ref(false)
 const successVisible = ref(false)
 
+const tableData          = ref<TableApi | null>(null)
 const allCategories      = ref<MenuCategoryApi[]>([])
 const selectedCategoryId = ref<number | null>(null)
-
-const cartItems     = ref<CartItemLocal[]>([])
-const dialogVisible = ref(false)
-const selectedItem  = ref<MenuItemApi | null>(null)
-const cartRef       = ref()
-
-// invoiceId يُحفظ بعد أول طلب ناجح لإضافة باقي الأصناف لنفس الفاتورة
-const currentInvoiceId = ref<number | null>(null)
+const cartItems          = ref<CartItemLocal[]>([])
+const dialogVisible      = ref(false)
+const selectedItem       = ref<MenuItemApi | null>(null)
+const cartRef            = ref()
+const currentInvoiceId   = ref<number | null>(null)
 
 // ── computed ───────────────────────────────────────────
-const tableId = computed(() => {
-  const id = Number(route.params.id)
-  return isNaN(id) ? null : id
-})
+const tableToken = computed(() => route.params.token as string)
+const tableId    = computed(() => tableData.value?.id ?? null)
+const tableNumber = computed(() => tableData.value?.number ?? tableToken.value)
 
-/** الفئات الفعالة التي تحتوي على عناصر متاحة */
-const activeCategories = computed<MenuCategoryApi[]>(() => {
-  return allCategories.value.filter(
+const activeCategories = computed<MenuCategoryApi[]>(() =>
+  allCategories.value.filter(
     c => c.isActive && c.menuItems?.some(i => i.isAvailable)
   )
-})
+)
 
-/** العناصر المتاحة للفئة المختارة */
 const filteredItems = computed<MenuItemApi[]>(() => {
   if (!selectedCategoryId.value) return []
   const cat = allCategories.value.find(c => c.id === selectedCategoryId.value)
@@ -269,10 +264,15 @@ function itemTotal(item: CartItemLocal) {
 // ── lifecycle ──────────────────────────────────────────
 onMounted(async () => {
   try {
-    const res = await menuApi.getFullMenu()
-    allCategories.value = Array.isArray(res) ? res : []
+    // جلب بيانات الطاولة والمنيو بالتوازي
+    const [tableRes, menuRes] = await Promise.all([
+      tableApi.getByToken(tableToken.value),
+      menuApi.getAll(),
+    ])
 
-    // اختر أول فئة فعالة تلقائياً
+    tableData.value     = tableRes
+    allCategories.value = Array.isArray(menuRes) ? menuRes : []
+
     if (activeCategories.value.length > 0) {
       selectedCategoryId.value = activeCategories.value[0].id
     }
@@ -280,7 +280,7 @@ onMounted(async () => {
     toast.add({
       severity: 'error',
       summary: 'خطأ',
-      detail: 'فشل تحميل المنيو، يرجى تحديث الصفحة',
+      detail: 'فشل تحميل البيانات، يرجى تحديث الصفحة',
       life: 4000,
     })
   } finally {
@@ -290,19 +290,17 @@ onMounted(async () => {
 
 // ── actions ────────────────────────────────────────────
 function openItem(item: MenuItemApi) {
-  selectedItem.value = item
+  selectedItem.value  = item
   dialogVisible.value = true
 }
 
 function onDialogAdd(cartItem: CartItemLocal) {
-  // إذا نفس المنتج بنفس الخيارات والملاحظة → زد الكمية فقط
   const existingIdx = cartItems.value.findIndex(c =>
     c.menuItem.id === cartItem.menuItem.id &&
     JSON.stringify(c.selectedOptions.map(o => o.id).sort()) ===
     JSON.stringify(cartItem.selectedOptions.map(o => o.id).sort()) &&
     c.note === cartItem.note
   )
-
   if (existingIdx !== -1) {
     cartItems.value[existingIdx].quantity += cartItem.quantity
   } else {
@@ -329,11 +327,10 @@ async function submitOrder() {
   if (!cartItems.value.length || !tableId.value) return
 
   submitting.value = true
-
   try {
     for (const item of cartItems.value) {
       const res = await orderApi.addItem({
-        invoiceId:           currentInvoiceId.value,  // null في أول طلب
+        invoiceId:           currentInvoiceId.value,
         tableId:             tableId.value,
         customerId:          CUSTOMER_ID,
         menuItemId:          item.menuItem.id,
@@ -342,13 +339,11 @@ async function submitOrder() {
         selectedItemOptions: item.selectedOptions.map(o => o.id),
       })
 
-      // احفظ الـ invoiceId من أول رد لإضافة باقي الأصناف لنفس الفاتورة
       if (!currentInvoiceId.value && res?.id) {
         currentInvoiceId.value = res.id
       }
     }
 
-    // أغلق الدرّاور وأظهر رسالة النجاح — السلة تبقى كما هي
     cartRef.value?.closeDrawer()
     successVisible.value = true
 

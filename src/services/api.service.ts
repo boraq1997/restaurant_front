@@ -21,6 +21,9 @@ export const tableApi = {
   getAll: (): Promise<TableApi[]> =>
     apiClient.get('/tables/all'),
 
+  getByToken: (token: string): Promise<TableApi> =>   // ← أضف هذا
+    apiClient.get(`/tables/token/${token}`),           // ← تأكد من الـ endpoint مع الـ backend
+
   getInvoices: (tableId: number): Promise<InvoiceApi[]> =>
     apiClient.get(`/tables/${tableId}/invoices`),
 }

@@ -38,7 +38,10 @@ export const menuApi = {
   editOption(id: number, data: Partial<CreateMenuOptionDto>) {
     return apiClient.put(`/menu/options/${id}/edit`, data)
   },
-  assignOption(itemId: number, optionId: number) {
-    return apiClient.post(`/menu/items/${itemId}/assign-option/${optionId}`, {})
+  assignOption(itemId: number, optionIds: number[]) {
+    return apiClient.post('/menu/items/assign-options', {
+      optionIds: optionIds,
+      menuItemIds: [itemId],
+    })
   },
 }

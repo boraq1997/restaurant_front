@@ -24,6 +24,9 @@ export interface MenuOption {
   id: number
   name: string
   price: number
+  description?: string
+  imageUrl?: string
+  isAvailable?: boolean
 }
 
 // Cart (للاستخدام في الواجهة فقط)
@@ -55,4 +58,8 @@ export interface CreateMenuItemDto {
 export interface CreateMenuOptionDto {
   name: string
   price: number
+  description?: string
+  imageUrl?: string
+  isAvailable: boolean
+  menuItemIds?: number[]
 }

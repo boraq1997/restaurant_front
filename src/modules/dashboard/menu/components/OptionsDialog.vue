@@ -100,37 +100,42 @@
       </div>
 
       <!-- ── إنشاء خيار جديد ── -->
-      <div v-else-if="mode === 'create'">
-        <div class="flex align-items-center justify-content-between mb-3">
-          <p class="font-medium text-sm text-500 m-0">خيار جديد</p>
-          <Button
-            icon="pi pi-arrow-right"
-            size="small"
-            text
-            severity="secondary"
-            v-tooltip="'رجوع'"
-            @click="mode = 'select'"
-          />
-        </div>
+      <!-- ── إنشاء خيار جديد ── -->
+<div v-else-if="mode === 'create'">
+  <div class="flex align-items-center justify-content-between mb-3">
+    <p class="font-medium text-sm text-500 m-0">خيار جديد</p>
+    <Button
+      icon="pi pi-arrow-right"
+      size="small"
+      text
+      severity="secondary"
+      v-tooltip="'رجوع'"
+      @click="mode = 'select'"
+    />
+  </div>
 
-        <div class="flex flex-column gap-3">
-          <div class="flex flex-column gap-2">
-            <label class="text-sm font-medium">اسم الخيار <span class="text-red-500">*</span></label>
-            <InputText v-model="newOption.name" placeholder="مثال: بدون ثوم" fluid />
-          </div>
-          <div class="flex flex-column gap-2">
-            <label class="text-sm font-medium">السعر الإضافي</label>
-            <InputNumber v-model="newOption.price" placeholder="0 = مجاني" fluid :min="0" />
-          </div>
-          <Button
-            label="إنشاء وإضافة للمادة"
-            icon="pi pi-plus"
-            :loading="loading"
-            :disabled="!newOption.name.trim()"
-            @click="handleCreateAndAssign"
-          />
-        </div>
-      </div>
+  <div class="flex flex-column gap-3">
+    <div class="flex flex-column gap-2">
+      <label class="text-sm font-medium">اسم الخيار <span class="text-red-500">*</span></label>
+      <InputText v-model="newOption.name" placeholder="مثال: بدون ثوم" fluid />
+    </div>
+    <div class="flex flex-column gap-2">
+      <label class="text-sm font-medium">الوصف</label>
+      <InputText v-model="newOption.description" placeholder="وصف اختياري" fluid />
+    </div>
+    <div class="flex flex-column gap-2">
+      <label class="text-sm font-medium">السعر الإضافي</label>
+      <InputNumber v-model="newOption.price" placeholder="0 = مجاني" fluid :min="0" />
+    </div>
+    <Button
+      label="إنشاء وإضافة للمادة"
+      icon="pi pi-plus"
+      :loading="loading"
+      :disabled="!newOption.name.trim()"
+      @click="handleCreateAndAssign"
+    />
+  </div>
+</div>
 
     </div>
   </Dialog>
@@ -155,8 +160,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [v: boolean]
-  assign:      [optionIds: number[]]
-  createAndAssign: [opt: { name: string; price: number }]
+  assign: [optionIds: number[]]
+  createAndAssign: [opt: { name: string; price: number; description?: string; isAvailable: boolean; menuItemIds: number[] }]
 }>()
 
 const menu = useMenuStore()
@@ -169,7 +174,7 @@ const visible = computed({
 // الوضع: اختيار أو إنشاء
 const mode        = ref<'select' | 'create'>('select')
 const selectedIds = ref<number[]>([])
-const newOption   = ref({ name: '', price: 0 })
+const newOption = ref({ name: '', price: 0, description: '', isAvailable: true })
 
 // جمع كل الخيارات من المينيو وإزالة المكررات وإزالة المضافة مسبقاً
 const availableOptions = computed<MenuOption[]>(() => {
@@ -189,7 +194,7 @@ const availableOptions = computed<MenuOption[]>(() => {
 // إعادة تعيين عند تغيير المادة
 watch(() => props.item, () => {
   selectedIds.value = []
-  newOption.value   = { name: '', price: 0 }
+  newOption.value   = { name: '', price: 0, description: '', isAvailable: true }
   mode.value        = 'select'
 })
 
@@ -210,8 +215,14 @@ function handleAssign() {
 
 function handleCreateAndAssign() {
   if (!newOption.value.name.trim()) return
-  emit('createAndAssign', { ...newOption.value })
-  newOption.value = { name: '', price: 0 }
+  emit('createAndAssign', {
+    name: newOption.value.name.trim(),
+    price: newOption.value.price,
+    description: newOption.value.description,
+    isAvailable: newOption.value.isAvailable,
+    menuItemIds: [],
+  })
+  newOption.value = { name: '', price: 0, description: '', isAvailable: true }
   mode.value = 'select'
 }
 </script>

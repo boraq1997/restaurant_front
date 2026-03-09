@@ -1,6 +1,21 @@
 <template>
   <div class="min-h-screen surface-50" dir="rtl">
 
+    <!-- Header -->
+    <div class="px-3 py-3 flex align-items-center justify-content-between border-bottom-1 border-200 surface-card">
+      <span class="font-bold text-lg text-900">الفئات</span>
+      <div class="flex gap-2">
+        <Button
+          icon="pi pi-sliders-h"
+          label="الخيارات"
+          severity="secondary"
+          size="small"
+          @click="optionsPanelVisible = true"
+        />
+        <Button label="فئة جديدة" icon="pi pi-plus" size="small" @click="openCreate" />
+      </div>
+    </div>
+
     <div v-if="menu.loading" class="flex justify-content-center py-8">
       <ProgressSpinner style="width:40px;height:40px" />
     </div>
@@ -36,6 +51,9 @@
       :loading="deleting"
       @confirm="onDeleteConfirmed"
     />
+
+    <OptionsPanel v-model="optionsPanelVisible" />
+
   </div>
 </template>
 
@@ -50,6 +68,7 @@ import ProgressSpinner from 'primevue/progressspinner'
 import CategoryGrid from '../components/CategoryGrid.vue'
 import CategoryDialog from '../components/CategoryDialog.vue'
 import ConfirmDeleteDialog from '../../../../components/shared/ConfirmDeleteDialog.vue'
+import OptionsPanel from '../components/OptionsPanel.vue'
 
 const router  = useRouter()
 const toast   = useToast()
@@ -63,6 +82,7 @@ const deleteDialogVisible = ref(false)
 const deleteMessage       = ref('')
 const deleting            = ref(false)
 const pendingDeleteId     = ref<number | null>(null)
+const optionsPanelVisible = ref(false)
 
 onMounted(() => menu.fetchMenu())
 

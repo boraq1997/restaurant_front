@@ -1,11 +1,20 @@
 <template>
   <div class="min-h-screen surface-50" dir="rtl">
 
-    <!-- Header ثابت وبسيط -->
-      <div class="px-3 py-3 flex align-items-center justify-content-between">
-        <Button icon="pi pi-arrow-right" text rounded severity="secondary" @click="router.back()" />
+    <!-- Header -->
+    <div class="px-3 py-3 flex align-items-center justify-content-between border-bottom-1 border-200 surface-card">
+      <Button icon="pi pi-arrow-right" text rounded severity="secondary" @click="router.back()" />
+      <div class="flex gap-2">
+        <Button
+          icon="pi pi-sliders-h"
+          label="الخيارات"
+          severity="secondary"
+          size="small"
+          @click="optionsPanelVisible = true"
+        />
         <Button label="مادة جديدة" icon="pi pi-plus" size="small" @click="openCreate" />
       </div>
+    </div>
 
     <!-- Loading -->
     <div v-if="menu.loading" class="flex justify-content-center py-8">
@@ -41,23 +50,27 @@
     <!-- Dialogs -->
     <ItemDialog v-model="dialogVisible" :item="editingItem"
       :loading="menu.saving" @save="handleSave" />
-      
+
     <CategoryDialog v-model="categoryDialogVisible" :category="category"
       :loading="menu.saving" @save="handleSaveCategory" />
 
-      <ConfirmDeleteDialog
-        v-model="deleteDialogVisible"
-        :message="deleteMessage"
-        :loading="deleting"
-        @confirm="onDeleteConfirmed"
-      />
-      <OptionsDialog
-        v-model="optionsVisible"
-        :item="selectedItem"
-        :loading="menu.saving"
-        @assign="handleAssign"
-        @create-and-assign="handleCreateAndAssign"
-      />
+    <ConfirmDeleteDialog
+      v-model="deleteDialogVisible"
+      :message="deleteMessage"
+      :loading="deleting"
+      @confirm="onDeleteConfirmed"
+    />
+
+    <OptionsDialog
+      v-model="optionsVisible"
+      :item="selectedItem"
+      :loading="menu.saving"
+      @assign="handleAssign"
+      @create-and-assign="handleCreateAndAssign"
+    />
+
+    <OptionsPanel v-model="optionsPanelVisible" />
+
   </div>
 </template>
 
@@ -75,6 +88,7 @@ import OptionsDialog from '../components/OptionsDialog.vue'
 import CategoryDialog from '../components/CategoryDialog.vue'
 import CategoryInfoCard from '../components/CategoryInfoCard.vue'
 import ConfirmDeleteDialog from '../../../../components/shared/ConfirmDeleteDialog.vue'
+import OptionsPanel from '../components/OptionsPanel.vue'
 
 const route  = useRoute()
 const router = useRouter()
@@ -87,6 +101,7 @@ const items      = computed(() => category.value?.menuItems ?? [])
 
 const dialogVisible         = ref(false)
 const optionsVisible        = ref(false)
+const optionsPanelVisible   = ref(false)
 const categoryDialogVisible = ref(false)
 const togglingCategory      = ref(false)
 const editingItem           = ref<MenuItem | null>(null)
@@ -140,9 +155,7 @@ async function handleSave(form: any) {
 async function handleAssign(optionIds: number[]) {
   if (!selectedItem.value) return
   try {
-    for (const optionId of optionIds) {
-      await menu.assignOption(selectedItem.value.id, optionId)
-    }
+    await menu.assignOption(selectedItem.value.id, optionIds)
     await menu.fetchCategoryById(categoryId.value)
     selectedItem.value = menu.categories
       .flatMap(c => c.menuItems ?? [])
@@ -188,7 +201,7 @@ async function handleToggleCategory() {
 }
 
 function handleDeleteCategory() {
-  if (!category.value) return   // ← بدون معامل، نقرأ من category.value مباشرة
+  if (!category.value) return
   deleteMessage.value = `هل تريد حذف فئة "${category.value.name}"؟`
   deleteDialogVisible.value = true
 }

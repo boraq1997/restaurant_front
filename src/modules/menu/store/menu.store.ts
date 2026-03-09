@@ -13,6 +13,13 @@ export const useMenuStore = defineStore('menu', () => {
     categories.value.flatMap(c => c.menuItems ?? [])  // ← items → menuItems
   )
 
+  const allOptions = computed(() =>
+    categories.value
+      .flatMap(c => c.menuItems ?? [])
+      .flatMap(i => i.menuOptions ?? [])
+      .filter((o, i, arr) => arr.findIndex(x => x.id === o.id) === i)
+  )
+
   const activeCategories = computed(() =>
     categories.value.filter(c => c.isActive)
   )
@@ -132,14 +139,14 @@ export const useMenuStore = defineStore('menu', () => {
     }
   }
 
-  async function assignOption(itemId: number, optionId: number) {
-    await menuApi.assignOption(itemId, optionId)
+  async function assignOption(itemId: number, optionIds: number[]) {
+    await menuApi.assignOption(itemId, optionIds)
     await fetchMenu()
   }
 
   return {
     categories, loading, saving, error,
-    allItems, activeCategories,
+    allItems, allOptions, activeCategories,
     fetchMenu, fetchCategoryById,
     createCategory, editCategory, deleteCategory, toggleCategory,
     createItem, editItem,

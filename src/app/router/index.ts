@@ -18,7 +18,7 @@ const routes: RouteRecordRaw[] = [
 
   // ── صفحة الزبون (بدون تسجيل دخول) ────────────────
   {
-    path: '/table/:id',
+    path: '/table/:token', 
     name: 'table-order',
     component: () => import('../../modules/guest/pages/TableOrder.vue'),
     meta: { public: true },
@@ -73,6 +73,11 @@ const routes: RouteRecordRaw[] = [
         path: 'users',
         name: 'dashboard-users',
         component: () => import('../../modules/dashboard/users/pages/UsersHome.vue'),
+      },
+      {
+        path: 'tables',
+        name: 'dashboard-tables',
+        component: () => import('../../modules/dashboard/tables/pages/tablesPage.vue'),
       },
       {
         path: 'waiter',
