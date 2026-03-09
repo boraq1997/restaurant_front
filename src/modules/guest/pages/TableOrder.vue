@@ -3,17 +3,30 @@
   <div class="min-h-screen surface-ground" dir="rtl">
 
     <!-- Header -->
-    <div class="surface-card shadow-1 px-3 py-3 sticky top-0 z-5">
-      <div class="flex align-items-center justify-content-between">
-        <div class="flex align-items-center gap-2">
-          <div>
-            <p class="font-bold text-base m-0 line-height-1">مطعمنا</p>
-            <span class="text-color-secondary text-xs">طاولة {{ tableNumber }}</span>
-          </div>
-        </div>
-        <Tag value="متاحة" severity="success" class="text-xs" />
+    <!-- Header -->
+<div class="surface-card shadow-1 px-3 py-3 sticky top-0 z-5">
+  <div class="flex align-items-center justify-content-between">
+    <div class="flex align-items-center gap-2">
+
+      <!-- زر الرجوع للويتر/ادمن فقط -->
+      <Button
+        v-if="isWaiterRoute"
+        icon="pi pi-arrow-right"
+        text
+        rounded
+        size="small"
+        class="ml-1"
+        @click="goBack"
+      />
+
+      <div>
+        <p class="font-bold text-base m-0 line-height-1">مطعمنا</p>
+        <span class="text-color-secondary text-xs">طاولة {{ tableNumber }}</span>
       </div>
     </div>
+    <Tag value="متاحة" severity="success" class="text-xs" />
+  </div>
+</div>
 
     <!-- Loading -->
     <div v-if="loading" class="flex justify-content-center align-items-center py-8">
@@ -21,6 +34,7 @@
     </div>
 
     <template v-else>
+
       <!-- MOBILE -->
       <div class="md:hidden">
         <div class="px-3 pt-3">
@@ -48,9 +62,15 @@
           <OrderCart
             ref="cartRef"
             :items="cartItems"
+            :existing-items="existingItems"
+            :updating-id="updatingId"
+            :updating-action="updatingAction"
             @increase="increaseItem"
             @decrease="decreaseItem"
             @confirm="submitOrder"
+            @remove-existing="removeExistingItem"
+            @increase-existing="updateExistingItemQty"
+            @decrease-existing="updateExistingItemQty"
           />
         </div>
       </div>
@@ -75,26 +95,84 @@
           </div>
         </div>
 
-        <!-- Cart Sidebar -->
+        <!-- Cart Sidebar Desktop -->
         <div class="surface-card border-right-1 surface-border flex flex-column" style="width: 340px;">
           <div class="px-4 py-3 border-bottom-1 surface-border flex align-items-center gap-2">
             <i class="pi pi-shopping-cart text-primary" />
             <span class="font-bold text-lg">السلة</span>
-            <Badge v-if="cartItems.length" :value="totalCartCount" severity="danger" class="mr-auto" />
+            <Badge v-if="totalCartCount > 0" :value="totalCartCount" severity="danger" class="mr-auto" />
           </div>
 
           <div class="flex-1 overflow-y-auto px-3 py-2">
-            <div v-if="!cartItems.length" class="flex flex-column align-items-center justify-content-center h-full gap-3 py-8">
+
+            <!-- فارغ -->
+            <div
+              v-if="!cartItems.length && !existingItems.length"
+              class="flex flex-column align-items-center justify-content-center h-full gap-3 py-8"
+            >
               <i class="pi pi-shopping-cart text-4xl text-color-secondary" />
               <p class="text-color-secondary text-sm">السلة فارغة</p>
             </div>
 
-            <div v-for="(cartItem, idx) in cartItems" :key="idx" class="surface-hover border-round-lg p-3 mb-2 border-1 surface-border">
-              <div class="flex align-items-center gap-2 mb-2">
+            <!-- مواد الفاتورة الحالية -->
+            <div v-if="existingItems.length > 0" class="mb-3">
+              <div class="flex align-items-center gap-2 mb-2 mt-2">
+                <i class="pi pi-list text-primary text-xs" />
+                <p class="text-xs font-bold text-500 m-0">الطلب الحالي على الطاولة</p>
+              </div>
+              <div
+                v-for="item in existingItems"
+                :key="item.id"
+                class="flex align-items-center justify-content-between py-2 border-bottom-1 border-100"
+              >
+                <span class="text-xs text-900 flex-1">{{ item.name }}</span>
+                <div class="flex align-items-center gap-1">
+                  <Button
+                    icon="pi pi-trash"
+                    text rounded size="small" severity="danger"
+                    style="width: 26px; height: 26px;"
+                    :loading="updatingId === item.id && updatingAction === 'delete'"
+                    @click="removeExistingItem(item.id)"
+                  />
+                  <Button
+                    icon="pi pi-minus"
+                    text rounded size="small"
+                    style="width: 26px; height: 26px;"
+                    :loading="updatingId === item.id && updatingAction === 'decrease'"
+                    @click="updateExistingItemQty(item.id, item.quantity - 1)"
+                  />
+                  <span class="font-bold text-xs text-primary w-1rem text-center">{{ item.quantity }}</span>
+                  <Button
+                    icon="pi pi-plus"
+                    text rounded size="small"
+                    style="width: 26px; height: 26px;"
+                    :loading="updatingId === item.id && updatingAction === 'increase'"
+                    @click="updateExistingItemQty(item.id, item.quantity + 1)"
+                  />
+                  <span class="text-xs text-500" style="min-width: 55px; text-align: left;">
+                    {{ item.total?.toLocaleString() }} د.ع
+                  </span>
+                </div>
+              </div>
+
+              <Divider v-if="cartItems.length > 0" class="my-2" />
+              <div v-if="cartItems.length > 0" class="flex align-items-center gap-2 mb-2">
+                <i class="pi pi-plus-circle text-green-500 text-xs" />
+                <p class="text-xs font-bold text-500 m-0">إضافات جديدة</p>
+              </div>
+            </div>
+
+            <!-- السلة الجديدة -->
+            <div
+              v-for="(cartItem, idx) in cartItems"
+              :key="idx"
+              class="border-round-lg p-3 mb-2 border-1 surface-border"
+            >
+              <div class="flex align-items-start gap-2 mb-2">
                 <div class="flex-1">
                   <p class="m-0 font-bold text-sm text-color">{{ cartItem.menuItem.name }}</p>
-                  <p v-if="cartItem.selectedOptions.length" class="m-0 text-xs text-color-secondary">
-                    {{ cartItem.selectedOptions.map(o => o.name).join('، ') }}
+                  <p v-if="cartItem.selectedOptions?.length" class="m-0 text-xs text-color-secondary">
+                    {{ cartItem.selectedOptions.map((o: any) => o.name).join('، ') }}
                   </p>
                   <p v-if="cartItem.note" class="m-0 text-xs text-orange-500">📝 {{ cartItem.note }}</p>
                 </div>
@@ -108,15 +186,37 @@
                 <span class="text-primary font-bold text-sm">{{ itemTotal(cartItem) }} د.ع</span>
               </div>
             </div>
+
           </div>
 
+          <!-- Footer السلة -->
           <div class="px-4 py-3 border-top-1 surface-border">
-            <div class="flex justify-content-between align-items-center mb-3">
-              <span class="text-color-secondary">الإجمالي</span>
-              <span class="font-bold text-xl text-primary">{{ totalPrice }} د.ع</span>
-            </div>
+
+            <template v-if="existingItems.length > 0 && cartItems.length > 0">
+              <div class="flex justify-content-between mb-1">
+                <span class="text-color-secondary text-sm">المبلغ الحالي</span>
+                <span class="text-sm font-bold">{{ existingTotal.toLocaleString() }} د.ع</span>
+              </div>
+              <div class="flex justify-content-between mb-1">
+                <span class="text-color-secondary text-sm">المبلغ الإضافي</span>
+                <span class="text-sm font-bold text-green-600">+ {{ totalPrice.toLocaleString() }} د.ع</span>
+              </div>
+              <Divider class="my-2" />
+              <div class="flex justify-content-between align-items-center mb-3">
+                <span class="font-bold text-base">المبلغ الكلي</span>
+                <span class="font-bold text-xl text-primary">{{ (existingTotal + totalPrice).toLocaleString() }} د.ع</span>
+              </div>
+            </template>
+
+            <template v-else>
+              <div class="flex justify-content-between align-items-center mb-3">
+                <span class="text-color-secondary">الإجمالي</span>
+                <span class="font-bold text-xl text-primary">{{ (existingTotal + totalPrice).toLocaleString() }} د.ع</span>
+              </div>
+            </template>
+
             <Button
-              label="تأكيد الطلب"
+              label="إرسال الطلب"
               icon="pi pi-check"
               class="w-full"
               :disabled="!cartItems.length || submitting"
@@ -126,6 +226,7 @@
           </div>
         </div>
       </div>
+
     </template>
 
     <!-- Dialog إضافة منتج -->
@@ -149,16 +250,13 @@
           <div class="w-5rem h-5rem border-round-full bg-green-100 flex align-items-center justify-content-center">
             <i class="pi pi-check text-green-600 text-4xl" />
           </div>
-          <p class="font-bold text-xl m-0 text-900">تم إرسال طلبك!</p>
-          <p class="text-color-secondary text-sm m-0 line-height-3">
-            سيقوم الويتر بتأكيد طلبك قريباً
-          </p>
+          <p class="font-bold text-xl m-0 text-900">تم إرسال الطلب!</p>
+          <p class="text-color-secondary text-sm m-0 line-height-3">تم إضافة الطلب بنجاح للطاولة</p>
 
-          <!-- ملخص الطلب المرسل -->
           <div class="w-full surface-50 border-round-lg p-3 border-1 surface-border text-right">
-            <p class="text-xs font-bold text-500 m-0 mb-2">طلبك الحالي</p>
+            <p class="text-xs font-bold text-500 m-0 mb-2">الطلب المضاف</p>
             <div
-              v-for="item in cartItems"
+              v-for="item in lastSubmittedItems"
               :key="item.menuItem.id"
               class="flex justify-content-between align-items-center py-1"
             >
@@ -170,7 +268,9 @@
             </div>
             <div class="border-top-1 surface-border mt-2 pt-2 flex justify-content-between">
               <span class="text-sm font-bold text-900">الإجمالي</span>
-              <span class="text-sm font-bold text-primary">{{ totalPrice }} د.ع</span>
+              <span class="text-sm font-bold text-primary">
+                {{ lastSubmittedItems.reduce((s, i) => s + itemTotal(i), 0) }} د.ع
+              </span>
             </div>
           </div>
 
@@ -194,18 +294,21 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { menuApi, orderApi, tableApi } from '../../../services/api.service'
-import type { MenuCategoryApi, MenuItemApi, TableApi } from '../../../types/api.types'
+import type { MenuCategoryApi, MenuItemApi, InvoiceApi } from '../../../types/api.types'
 import type { CartItemLocal } from '../../../components/shared/menu/MenuItemDialog.vue'
+import { useAuthStore } from '../../auth/store/auth.store' // عدّل المسار حسب مشروعك
+import { useRouter } from 'vue-router'
 
 import MenuCategory from '../../../components/shared/menu/MenuCategory.vue'
 import MenuItemCard from '../../../components/shared/menu/MenuItem.vue'
-import OrderCart from '../../../components/shared/menu/OrderCart.vue'
+import OrderCart from '../components/OrderCart.vue'
 import MenuItemDialog from '../../../components/shared/menu/MenuItemDialog.vue'
 
 import Card from 'primevue/card'
 import Tag from 'primevue/tag'
 import Badge from 'primevue/badge'
 import Button from 'primevue/button'
+import Divider from 'primevue/divider'
 import Dialog from 'primevue/dialog'
 import ProgressSpinner from 'primevue/progressspinner'
 
@@ -214,31 +317,39 @@ const CUSTOMER_ID = 1
 
 // ── composables ────────────────────────────────────────
 const route = useRoute()
+const router = useRouter()
 const toast = useToast()
+const authStore = useAuthStore()
 
 // ── state ──────────────────────────────────────────────
-const loading        = ref(true)
-const submitting     = ref(false)
-const successVisible = ref(false)
-
-const tableData          = ref<TableApi | null>(null)
+const loading            = ref(true)
+const submitting         = ref(false)
+const successVisible     = ref(false)
+const tableData          = ref<any | null>(null)
 const allCategories      = ref<MenuCategoryApi[]>([])
 const selectedCategoryId = ref<number | null>(null)
 const cartItems          = ref<CartItemLocal[]>([])
+const existingItems      = ref<{ id: number; name: string; quantity: number; price: number; total: number }[]>([])
+const lastSubmittedItems = ref<CartItemLocal[]>([])
 const dialogVisible      = ref(false)
 const selectedItem       = ref<MenuItemApi | null>(null)
 const cartRef            = ref()
 const currentInvoiceId   = ref<number | null>(null)
+const tableInvoices      = ref<InvoiceApi[]>([])
+const showPrevOrders     = ref(false)
+const updatingId         = ref<number | null>(null)
+const updatingAction     = ref<string | null>(null)
 
 // ── computed ───────────────────────────────────────────
-const tableToken = computed(() => route.params.token as string)
-const tableId    = computed(() => tableData.value?.id ?? null)
-const tableNumber = computed(() => tableData.value?.number ?? tableToken.value)
+const tableId     = computed(() => route.params.id ? Number(route.params.id) : tableData.value?.id ?? null)
+const tableNumber = computed(() => tableData.value?.number ?? tableId.value ?? route.params.token)
+const isWaiterRoute = computed(() => !!route.params.id)
+const existingTotal = computed(() =>
+  existingItems.value.reduce((s, i) => s + (i.total ?? i.price * i.quantity), 0)
+)
 
 const activeCategories = computed<MenuCategoryApi[]>(() =>
-  allCategories.value.filter(
-    c => c.isActive && c.menuItems?.some(i => i.isAvailable)
-  )
+  allCategories.value.filter(c => c.isActive && c.menuItems?.some(i => i.isAvailable))
 )
 
 const filteredItems = computed<MenuItemApi[]>(() => {
@@ -257,18 +368,80 @@ const totalPrice = computed(() =>
 
 // ── helpers ────────────────────────────────────────────
 function itemTotal(item: CartItemLocal) {
-  const optionsTotal = item.selectedOptions.reduce((s, o) => s + o.price, 0)
+  const optionsTotal = item.selectedOptions?.reduce((s: number, o: any) => s + o.price, 0) ?? 0
   return (item.menuItem.price + optionsTotal) * item.quantity
+}
+
+function invoiceStatusLabel(status: number) {
+  switch (status) {
+    case 0: return 'مفتوح'
+    case 1: return 'مدفوع'
+    case 2: return 'ملغي'
+    case 3: return 'محوّل'
+    default: return 'غير معروف'
+  }
+}
+
+function invoiceStatusSeverity(status: number): 'warn' | 'success' | 'danger' | 'secondary' {
+  switch (status) {
+    case 0: return 'warn'
+    case 1: return 'success'
+    case 2: return 'danger'
+    default: return 'secondary'
+  }
+}
+
+// ── helper: تحديث existingItems من API ────────────────
+async function refreshInvoices() {
+  if (!tableId.value) return
+  const invoices = await tableApi.getInvoices(tableId.value)
+  const rawInvoices = Array.isArray(invoices) ? invoices : []
+  tableInvoices.value = rawInvoices.map((inv: any) => ({
+    ...inv,
+    status:     inv.invoiceStatus ?? inv.status ?? 0,
+    totalPrice: inv.finalPrice    ?? inv.totalPrice ?? 0,
+    items:      inv.invoiceItemsDto ?? inv.items ?? [],
+  }))
+  const openInvoice = tableInvoices.value.find(inv => inv.status === 0)
+  if (openInvoice) {
+    currentInvoiceId.value = openInvoice.id
+    const invoiceItems = openInvoice.items ?? openInvoice.invoiceItemsDto ?? []
+    existingItems.value = invoiceItems.map((item: any) => ({
+      id:       item.id,
+      name:     item.menuItemName,
+      quantity: item.quantity,
+      price:    item.price,
+      total:    item.totalPrice,
+    }))
+    showPrevOrders.value = true
+  } else {
+    existingItems.value = []
+  }
 }
 
 // ── lifecycle ──────────────────────────────────────────
 onMounted(async () => {
   try {
-    // جلب بيانات الطاولة والمنيو بالتوازي
-    const [tableRes, menuRes] = await Promise.all([
-      tableApi.getByToken(tableToken.value),
-      menuApi.getAll(),
-    ])
+    const isWaiterRoute = !!route.params.id
+    let tableRes: any
+    let menuRes: any
+
+    if (isWaiterRoute) {
+      ;[tableRes, menuRes] = await Promise.all([
+        tableApi.getById(Number(route.params.id)),
+        menuApi.getAll(),
+      ])
+      try {
+        await refreshInvoices()
+      } catch {
+        tableInvoices.value = []
+      }
+    } else {
+      ;[tableRes, menuRes] = await Promise.all([
+        tableApi.getByToken(route.params.token as string),
+        menuApi.getAll(),
+      ])
+    }
 
     tableData.value     = tableRes
     allCategories.value = Array.isArray(menuRes) ? menuRes : []
@@ -277,12 +450,7 @@ onMounted(async () => {
       selectedCategoryId.value = activeCategories.value[0].id
     }
   } catch {
-    toast.add({
-      severity: 'error',
-      summary: 'خطأ',
-      detail: 'فشل تحميل البيانات، يرجى تحديث الصفحة',
-      life: 4000,
-    })
+    toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل تحميل البيانات، يرجى تحديث الصفحة', life: 4000 })
   } finally {
     loading.value = false
   }
@@ -297,8 +465,8 @@ function openItem(item: MenuItemApi) {
 function onDialogAdd(cartItem: CartItemLocal) {
   const existingIdx = cartItems.value.findIndex(c =>
     c.menuItem.id === cartItem.menuItem.id &&
-    JSON.stringify(c.selectedOptions.map(o => o.id).sort()) ===
-    JSON.stringify(cartItem.selectedOptions.map(o => o.id).sort()) &&
+    JSON.stringify(c.selectedOptions.map((o: any) => o.id).sort()) ===
+    JSON.stringify(cartItem.selectedOptions.map((o: any) => o.id).sort()) &&
     c.note === cartItem.note
   )
   if (existingIdx !== -1) {
@@ -323,12 +491,42 @@ function decreaseItem(id: number) {
   }
 }
 
+async function removeExistingItem(itemId: number) {
+  updatingId.value     = itemId
+  updatingAction.value = 'delete'
+  try {
+    await orderApi.removeItem(itemId)
+    await refreshInvoices()
+  } catch {
+    toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل حذف المادة', life: 3000 })
+  } finally {
+    updatingId.value     = null
+    updatingAction.value = null
+  }
+}
+
+async function updateExistingItemQty(itemId: number, newQty: number) {
+  if (newQty <= 0) return removeExistingItem(itemId)
+  const action = newQty > (existingItems.value.find(i => i.id === itemId)?.quantity ?? 0) ? 'increase' : 'decrease'
+  updatingId.value     = itemId
+  updatingAction.value = action
+  try {
+    await orderApi.updateItem(itemId, newQty)
+    await refreshInvoices()
+  } catch {
+    toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل تعديل الكمية', life: 3000 })
+  } finally {
+    updatingId.value     = null
+    updatingAction.value = null
+  }
+}
+
 async function submitOrder() {
   if (!cartItems.value.length || !tableId.value) return
-
   submitting.value = true
   try {
     for (const item of cartItems.value) {
+      if (!item.menuItem.id || item.menuItem.id === 0) continue
       const res = await orderApi.addItem({
         invoiceId:           currentInvoiceId.value,
         tableId:             tableId.value,
@@ -336,26 +534,43 @@ async function submitOrder() {
         menuItemId:          item.menuItem.id,
         quantity:            item.quantity,
         notes:               item.note || null,
-        selectedItemOptions: item.selectedOptions.map(o => o.id),
+        selectedItemOptions: item.selectedOptions.map((o: any) => o.id),
       })
-
       if (!currentInvoiceId.value && res?.id) {
         currentInvoiceId.value = res.id
       }
     }
 
+    lastSubmittedItems.value = [...cartItems.value]
+    cartItems.value = []
     cartRef.value?.closeDrawer()
     successVisible.value = true
 
+    try { await refreshInvoices() } catch { /* تجاهل */ }
+
   } catch {
-    toast.add({
-      severity: 'error',
-      summary: 'خطأ',
-      detail: 'فشل إرسال الطلب، حاول مرة أخرى',
-      life: 3000,
-    })
+    toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل إرسال الطلب، حاول مرة أخرى', life: 3000 })
   } finally {
     submitting.value = false
   }
 }
+
+function goBack() {
+  console.log('roleName:', authStore.userRole)
+  
+  if (authStore.userRole === 'Admin') {
+    router.push('/dashboard/waiter')
+  } else {
+    router.push('/waiter')
+  }
+}
 </script>
+
+<style scoped>
+.expand-enter-active, .expand-leave-active {
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+.expand-enter-from, .expand-leave-to { opacity: 0; max-height: 0; }
+.expand-enter-to, .expand-leave-from { opacity: 1; max-height: 600px; }
+</style>

@@ -42,24 +42,32 @@ export interface TableApi {
 
 export interface InvoiceItemApi {
   id: number
-  menuItemId: number
+  menuItemId?: number
   menuItemName: string
   quantity: number
-  unitPrice: number
+  unitPrice?: number
+  price: number
   totalPrice: number
   notes?: string | null
+  status?: number
+  selectedOptionsDto?: MenuOptionApi[]
   selectedOptions?: MenuOptionApi[]
 }
 
 export interface InvoiceApi {
   id: number
   tableId: number
-  status: InvoiceStatus
-  orderType: OrderTypes
+  invoiceStatus: number
+  status?: number
+  orderType: number
   notes?: string | null
   createdAt: string
-  items: InvoiceItemApi[]
-  totalPrice: number
+  invoiceItemsDto?: InvoiceItemApi[]
+  items?: InvoiceItemApi[]
+  subTotalPrice?: number
+  finalPrice: number
+  totalPrice?: number
+  username?: string
 }
 
 // --- Request DTOs ---

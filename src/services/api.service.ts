@@ -13,16 +13,22 @@ import type {
 } from '../types/api.types'
 
 export const menuApi = {
+  getAll: (): Promise<MenuCategoryApi[]> =>
+    apiClient.get('/menu/all'),
+
   getFullMenu: (): Promise<MenuCategoryApi[]> =>
-    apiClient.get('/menu/all')
+    apiClient.get('/menu/all'),
 }
 
 export const tableApi = {
   getAll: (): Promise<TableApi[]> =>
     apiClient.get('/tables/all'),
 
-  getByToken: (token: string): Promise<TableApi> =>   // ← أضف هذا
-    apiClient.get(`/tables/token/${token}`),           // ← تأكد من الـ endpoint مع الـ backend
+  getById: (id: number): Promise<TableApi> =>
+    apiClient.get(`/tables/${id}`),
+
+  getByToken: (token: string): Promise<TableApi> =>
+    apiClient.get(`/customers/Menu/${token}`),
 
   getInvoices: (tableId: number): Promise<InvoiceApi[]> =>
     apiClient.get(`/tables/${tableId}/invoices`),
@@ -58,4 +64,10 @@ export const orderApi = {
     PageSize?: number
   }): Promise<any> =>
     apiClient.get('/order/history', params),
+
+  removeItem: (itemId: number) =>
+    apiClient.delete(`/order/remove-item/${itemId}`),
+
+  updateItem: (itemId: number, quantity: number) =>
+    apiClient.put(`/order/update-item/${itemId}`, { quantity }),
 }

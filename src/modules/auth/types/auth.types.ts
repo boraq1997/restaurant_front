@@ -8,8 +8,9 @@ export type UserRole = 'Admin' | 'Waiter' | 'Cashier'
 // شكل الـ response من الـ backend
 export interface LoginResponse {
   token: string
-  user: string    // الـ backend يرجع "user" وليس "username"
-  role: UserRole
+  user: string
+  roleName: UserRole 
+  roleId: number
 }
 
 // بيانات المستخدم التي نخزنها محلياً

@@ -102,7 +102,8 @@
               :alt="bill.label"
               class="w-full h-full"
               style="object-fit: cover;"
-              @error="onBillImageError($event, bill.value)"
+              @error="(e) => ((e.target as HTMLImageElement).src = DEFAULT_IMAGE)"
+
             />
             <!-- overlay + عداد -->
             <Transition name="fade">
@@ -187,6 +188,7 @@ const props = defineProps<{
   modelValue: boolean
   totalPrice: number
 }>()
+const DEFAULT_IMAGE = '/defaultImages/defaultFood.jpeg'
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]

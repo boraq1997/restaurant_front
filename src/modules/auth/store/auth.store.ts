@@ -26,7 +26,7 @@ export const useAuthStore = defineStore('auth', () => {
       // الـ backend يرجع "user" وليس "username"
       const authUser: AuthUser = {
         username: res.user,
-        role: res.role,
+        role: res.roleName as UserRole,
       }
 
       token.value = res.token
@@ -35,7 +35,7 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.setItem('token', res.token)
       localStorage.setItem('user', JSON.stringify(authUser))
 
-      const home = ROLE_HOME_MAP[res.role] ?? '/waiter'
+      const home = ROLE_HOME_MAP[res.roleName] ?? '/waiter'
       await router.push(home)
 
     } catch (err: any) {

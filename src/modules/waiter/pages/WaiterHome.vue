@@ -242,8 +242,7 @@ function onFilter(status: Table['status']) {
 
 function onTableSelect(table: Table) {
   const isAdmin = auth.user?.role === 'Admin'
-  //onst base    = isAdmin ? '/dashboard/waiter/table' : '/waiter/table'
-  const base = 'waiter/table'
+  const base = isAdmin ? '/dashboard/waiter/table' : '/waiter/table'
   router.push(`${base}/${table.id}`)
 }
 
