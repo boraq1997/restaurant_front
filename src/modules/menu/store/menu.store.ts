@@ -119,6 +119,43 @@ export const useMenuStore = defineStore('menu', () => {
     }
   }
 
+  async function toggleItem(id: number) {
+  try {
+    await menuApi.toggleItem(id)
+    // تحديث محلي فوري بدون fetch
+    for (const cat of categories.value) {
+      const item = (cat.menuItems ?? []).find(i => i.id === id)
+      if (item) {
+        item.isAvailable = !item.isAvailable
+        break
+      }
+    }
+  } catch (e: any) {
+    error.value = e?.message ?? 'فشل تغيير حالة المادة'
+    throw e
+  }
+}
+
+async function deleteItem(id: number) {
+  saving.value = true
+  try {
+    await menuApi.deleteItem(id)
+    // حذف محلي فوري
+    for (const cat of categories.value) {
+      const index = (cat.menuItems ?? []).findIndex(i => i.id === id)
+      if (index !== -1) {
+        cat.menuItems!.splice(index, 1)
+        break
+      }
+    }
+  } catch (e: any) {
+    error.value = e?.message ?? 'فشل حذف المادة'
+    throw e
+  } finally {
+    saving.value = false
+  }
+}
+
   // ── الـ Options ──────────────────────────────────
   async function createOption(data: CreateMenuOptionDto) {
     saving.value = true
@@ -149,7 +186,7 @@ export const useMenuStore = defineStore('menu', () => {
     allItems, allOptions, activeCategories,
     fetchMenu, fetchCategoryById,
     createCategory, editCategory, deleteCategory, toggleCategory,
-    createItem, editItem,
+    createItem, editItem, toggleItem, deleteItem,
     createOption, editOption, assignOption,
   }
 })

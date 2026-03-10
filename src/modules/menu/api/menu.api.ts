@@ -32,6 +32,12 @@ export const menuApi = {
   editItem(id: number, data: Partial<CreateMenuItemDto>) {
     return apiClient.put(`/menu/items/${id}/edit`, data)
   },
+  toggleItem(id: number) {                              // ← جديد
+    return apiClient.post(`/menu/items/${id}/toggle`, {})
+  },
+  deleteItem(id: number) {                              // ← جديد
+    return apiClient.delete(`/menu/items/${id}/delete`)
+  },
   createOption(data: CreateMenuOptionDto) {
     return apiClient.post('/menu/options/create', data)
   },

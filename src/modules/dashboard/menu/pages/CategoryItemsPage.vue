@@ -42,17 +42,32 @@
       </div>
 
       <main v-else class="px-3 py-3">
-        <ItemGrid :items="items" @edit="openEdit" @options="openOptions" />
+        <ItemGrid
+          :items="items"
+          :toggling-id="togglingItemId"
+          @edit="openEdit"
+          @options="openOptions"
+          @toggle="handleToggleItem"
+          @delete="handleDeleteItem"
+        />
       </main>
 
     </template>
 
     <!-- Dialogs -->
-    <ItemDialog v-model="dialogVisible" :item="editingItem"
-      :loading="menu.saving" @save="handleSave" />
+    <ItemDialog
+      v-model="dialogVisible"
+      :item="editingItem"
+      :loading="menu.saving"
+      @save="handleSave"
+    />
 
-    <CategoryDialog v-model="categoryDialogVisible" :category="category"
-      :loading="menu.saving" @save="handleSaveCategory" />
+    <CategoryDialog
+      v-model="categoryDialogVisible"
+      :category="category"
+      :loading="menu.saving"
+      @save="handleSaveCategory"
+    />
 
     <ConfirmDeleteDialog
       v-model="deleteDialogVisible"
@@ -104,30 +119,34 @@ const optionsVisible        = ref(false)
 const optionsPanelVisible   = ref(false)
 const categoryDialogVisible = ref(false)
 const togglingCategory      = ref(false)
+const togglingItemId        = ref<number | null>(null)
 const editingItem           = ref<MenuItem | null>(null)
 const selectedItem          = ref<MenuItem | null>(null)
 
+// ── Delete state مشترك ─────────────────────────────
 const deleteDialogVisible = ref(false)
 const deleteMessage       = ref('')
 const deleting            = ref(false)
+const pendingDeleteCategoryId = ref<number | null>(null)
+const pendingDeleteItemId     = ref<number | null>(null)
 
 onMounted(async () => {
   await menu.fetchCategoryById(categoryId.value)
 })
 
-// ── المواد ──────────────────────────────────────────
+// ── المواد ─────────────────────────────────────────
 function openCreate() {
-  editingItem.value = null
+  editingItem.value   = null
   dialogVisible.value = true
 }
 
 function openEdit(item: MenuItem) {
-  editingItem.value = item
+  editingItem.value   = item
   dialogVisible.value = true
 }
 
 function openOptions(item: MenuItem) {
-  selectedItem.value = item
+  selectedItem.value   = item
   optionsVisible.value = true
 }
 
@@ -137,7 +156,11 @@ async function handleSave(form: any) {
     return
   }
   try {
-    const payload = { ...form, categoryId: categoryId.value, specificPrinterId: form.specificPrinterId ?? 0 }
+    const payload = {
+      ...form,
+      categoryId:        categoryId.value,
+      specificPrinterId: form.specificPrinterId ?? null,
+    }
     if (editingItem.value) {
       await menu.editItem(editingItem.value.id, payload)
       toast.add({ severity: 'success', summary: 'تم', detail: 'تم تعديل المادة', life: 2000 })
@@ -152,6 +175,34 @@ async function handleSave(form: any) {
   }
 }
 
+// ── Toggle المادة ──────────────────────────────────
+async function handleToggleItem(item: MenuItem) {
+  togglingItemId.value = item.id
+  try {
+    await menu.toggleItem(item.id)
+    await menu.fetchCategoryById(categoryId.value)
+    toast.add({
+      severity: 'info',
+      summary:  'تم',
+      detail:   item.isAvailable ? 'تم تفعيل المادة' : 'تم تعطيل المادة',
+      life:     1500,
+    })
+  } catch {
+    toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل تغيير الحالة', life: 3000 })
+  } finally {
+    togglingItemId.value = null
+  }
+}
+
+// ── حذف المادة ─────────────────────────────────────
+function handleDeleteItem(item: MenuItem) {
+  pendingDeleteItemId.value     = item.id
+  pendingDeleteCategoryId.value = null
+  deleteMessage.value           = `هل تريد حذف "${item.name}"؟`
+  deleteDialogVisible.value     = true
+}
+
+// ── الخيارات ───────────────────────────────────────
 async function handleAssign(optionIds: number[]) {
   if (!selectedItem.value) return
   try {
@@ -160,9 +211,9 @@ async function handleAssign(optionIds: number[]) {
     selectedItem.value = menu.categories
       .flatMap(c => c.menuItems ?? [])
       .find(i => i.id === selectedItem.value!.id) ?? selectedItem.value
-    toast.add({ severity: 'success', summary: 'تم', detail: 'تمت إضافة الخيارات', life: 2000 })
+    toast.add({ severity: 'success', summary: 'تم', detail: 'تم حفظ الخيارات', life: 2000 })
   } catch {
-    toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل إضافة الخيارات', life: 3000 })
+    toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل حفظ الخيارات', life: 3000 })
   }
 }
 
@@ -194,7 +245,12 @@ async function handleToggleCategory() {
   try {
     await menu.toggleCategory(category.value.id)
     await menu.fetchCategoryById(categoryId.value)
-    toast.add({ severity: 'info', summary: 'تم', detail: category.value.isActive ? 'تم التفعيل' : 'تم التعطيل', life: 1500 })
+    toast.add({
+      severity: 'info',
+      summary:  'تم',
+      detail:   category.value.isActive ? 'تم التفعيل' : 'تم التعطيل',
+      life:     1500,
+    })
   } finally {
     togglingCategory.value = false
   }
@@ -202,22 +258,37 @@ async function handleToggleCategory() {
 
 function handleDeleteCategory() {
   if (!category.value) return
-  deleteMessage.value = `هل تريد حذف فئة "${category.value.name}"؟`
-  deleteDialogVisible.value = true
+  pendingDeleteCategoryId.value = category.value.id
+  pendingDeleteItemId.value     = null
+  deleteMessage.value           = `هل تريد حذف فئة "${category.value.name}"؟`
+  deleteDialogVisible.value     = true
 }
 
+// ── تأكيد الحذف (مشترك) ───────────────────────────
 async function onDeleteConfirmed() {
-  if (!category.value) return
   deleting.value = true
   try {
-    await menu.deleteCategory(category.value.id)
-    toast.add({ severity: 'success', summary: 'تم', detail: 'تم حذف الفئة', life: 2000 })
-    deleteDialogVisible.value = false
-    router.back()
+    // حذف فئة
+    if (pendingDeleteCategoryId.value) {
+      await menu.deleteCategory(pendingDeleteCategoryId.value)
+      toast.add({ severity: 'success', summary: 'تم', detail: 'تم حذف الفئة', life: 2000 })
+      deleteDialogVisible.value = false
+      router.back()
+      return
+    }
+    // حذف مادة
+    if (pendingDeleteItemId.value) {
+      await menu.deleteItem(pendingDeleteItemId.value)
+      toast.add({ severity: 'success', summary: 'تم', detail: 'تم حذف المادة', life: 2000 })
+      deleteDialogVisible.value = false
+      await menu.fetchCategoryById(categoryId.value)
+    }
   } catch {
     toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل الحذف', life: 3000 })
   } finally {
-    deleting.value = false
+    deleting.value                = false
+    pendingDeleteCategoryId.value = null
+    pendingDeleteItemId.value     = null
   }
 }
 

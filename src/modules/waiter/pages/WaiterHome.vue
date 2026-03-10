@@ -42,6 +42,27 @@
           :active-filter="activeFilter"
           @filter="onFilter"
         />
+
+        <!-- Floors Tab Bar - يظهر فقط إذا كان هناك طوابق -->
+        <div v-if="hasFloors" class="flex gap-2 overflow-x-auto pt-3 pb-1" style="scrollbar-width: none;">
+          <button
+            class="floor-tab"
+            :class="{ active: selectedFloorId === null }"
+            @click="selectedFloorId = null"
+          >
+            الكل
+          </button>
+          <button
+            v-for="floor in floors"
+            :key="floor.id"
+            class="floor-tab"
+            :class="{ active: selectedFloorId === floor.id }"
+            @click="selectedFloorId = floor.id"
+          >
+            {{ floor.name }}
+          </button>
+        </div>
+
       </div>
     </header>
 
@@ -80,19 +101,51 @@
         <ProgressSpinner />
       </div>
 
-      <Transition v-else name="fade" mode="out-in">
-        <div
-          v-if="filteredTables.length === 0"
-          class="flex flex-column align-items-center justify-content-center py-8 gap-3"
-        >
-          <i class="pi pi-inbox text-4xl text-300" />
-          <p class="text-500 m-0">لا توجد طاولات</p>
-          <Button label="عرض الكل" text size="small" @click="activeFilter = null" />
-        </div>
+      <template v-else>
 
-        <TableGrid v-else :tables="filteredTables" @select="onTableSelect" />
-      </Transition>
+        <!-- ── عرض بطوابق ── -->
+        <template v-if="hasFloors">
+          <template v-for="floor in visibleFloors" :key="floor.id">
+            <div v-if="tablesForFloor(floor.id).length > 0" class="mb-5">
+              <!-- عنوان الطابق -->
+              <div class="flex align-items-center gap-2 mb-3">
+                <div class="w-2rem h-2rem border-round bg-primary flex align-items-center justify-content-center flex-shrink-0">
+                  <i class="pi pi-building text-white text-xs" />
+                </div>
+                <span class="font-bold text-800">{{ floor.name }}</span>
+                <Tag :value="String(tablesForFloor(floor.id).length)" severity="secondary" rounded class="text-xs" />
+              </div>
+              <TableGrid :tables="tablesForFloor(floor.id)" @select="onTableSelect" />
+            </div>
+          </template>
 
+          <!-- لا توجد طاولات بعد الفلتر -->
+          <div
+            v-if="visibleFloors.every(f => tablesForFloor(f.id).length === 0)"
+            class="flex flex-column align-items-center justify-content-center py-8 gap-3"
+          >
+            <i class="pi pi-inbox text-4xl text-300" />
+            <p class="text-500 m-0">لا توجد طاولات</p>
+            <Button label="عرض الكل" text size="small" @click="activeFilter = null; selectedFloorId = null" />
+          </div>
+        </template>
+
+        <!-- ── عرض بدون طوابق (عادي) ── -->
+        <template v-else>
+          <Transition name="fade" mode="out-in">
+            <div
+              v-if="filteredTables.length === 0"
+              class="flex flex-column align-items-center justify-content-center py-8 gap-3"
+            >
+              <i class="pi pi-inbox text-4xl text-300" />
+              <p class="text-500 m-0">لا توجد طاولات</p>
+              <Button label="عرض الكل" text size="small" @click="activeFilter = null" />
+            </div>
+            <TableGrid v-else :tables="filteredTables" @select="onTableSelect" />
+          </Transition>
+        </template>
+
+      </template>
     </main>
 
     <!-- Alerts Dialog -->
@@ -139,7 +192,9 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { tableApi } from '../../../services/api.service'
+import { tablesAdminApi } from '../../dashboard/tables/api/tables-admin.api'
 import type { Table, TableAlert } from '../types/waiter.types'
+import type { Floor } from '../../dashboard/tables/types/tables-admin.types'
 import TableGrid from '../components/TableGrid.vue'
 import TableStatsBar from '../components/TableStatsBar.vue'
 import LogoutButton from '../../../components/shared/Logoutbutton.vue'
@@ -149,16 +204,18 @@ import Dialog from 'primevue/dialog'
 import ProgressSpinner from 'primevue/progressspinner'
 import { useAuthStore } from '../../auth/store/auth.store'
 
-const auth = useAuthStore()
+const auth   = useAuthStore()
 const router = useRouter()
 const toast  = useToast()
 
-const currentTime  = ref('')
-const activeFilter = ref<Table['status'] | null>(null)
-const isRefreshing = ref(false)
-const showAlerts   = ref(false)
-const loading      = ref(true)
-const tables       = ref<Table[]>([])
+const currentTime    = ref('')
+const activeFilter   = ref<Table['status'] | null>(null)
+const isRefreshing   = ref(false)
+const showAlerts     = ref(false)
+const loading        = ref(true)
+const tables         = ref<Table[]>([])
+const floors         = ref<Floor[]>([])
+const selectedFloorId = ref<number | null>(null)
 
 let timer: ReturnType<typeof setInterval>
 
@@ -172,15 +229,23 @@ onUnmounted(() => clearInterval(timer))
 async function loadTables() {
   loading.value = true
   try {
-    const res = await tableApi.getAll()
-    tables.value = (res.items ?? res).map((t: any) => ({
-      id:          t.id,
-      name:        `طاولة ${t.number}`,
-      number:      t.number,
-      capacity:    t.capacity,
-      status:      mapStatus(t.status),
+    const [floorsRes, tablesRes] = await Promise.all([
+      tablesAdminApi.getAllFloors().catch(() => []),
+      tableApi.getAll(),
+    ])
+
+    floors.value = Array.isArray(floorsRes) ? floorsRes : (floorsRes as any)?.items ?? []
+
+    const items = (tablesRes as any).items ?? tablesRes
+    tables.value = items.map((t: any) => ({
+      id:       t.id,
+      name:     `طاولة ${t.number}`,
+      number:   t.number,
+      capacity: t.capacity,
+      floorId:  t.floorId ?? null,
+      status:   mapStatus(t.status),
       reservation: null,
-      alerts:      [],
+      alerts:   [],
     }))
   } catch {
     toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل تحميل الطاولات', life: 3000 })
@@ -210,22 +275,35 @@ function updateTime() {
   })
 }
 
+// ── Floors ────────────────────────────────────────────
+const hasFloors = computed(() => floors.value.length > 0)
+
+const visibleFloors = computed(() =>
+  selectedFloorId.value !== null
+    ? floors.value.filter(f => f.id === selectedFloorId.value)
+    : floors.value
+)
+
+function tablesForFloor(floorId: number): Table[] {
+  return applyFilter(tables.value.filter(t => (t as any).floorId === floorId))
+}
+
+// ── Filters ───────────────────────────────────────────
+function applyFilter(list: Table[]): Table[] {
+  return activeFilter.value
+    ? list.filter(t => t.status === activeFilter.value)
+    : list
+}
+
+const filteredTables = computed(() => applyFilter(tables.value))
+
+// ── Stats ─────────────────────────────────────────────
 const availableCount = computed(() => tables.value.filter(t => t.status === 'available').length)
 const occupiedCount  = computed(() => tables.value.filter(t => t.status === 'occupied').length)
 const reservedCount  = computed(() => tables.value.filter(t => t.status === 'reserved').length)
 
-const filteredTables = computed(() =>
-  activeFilter.value
-    ? tables.value.filter(t => t.status === activeFilter.value)
-    : tables.value
-)
-
-const tablesWithAlerts = computed(() =>
-  tables.value.filter(t => t.alerts && t.alerts.length > 0)
-)
-const alertsCount = computed(() =>
-  tables.value.reduce((sum, t) => sum + (t.alerts?.length ?? 0), 0)
-)
+const tablesWithAlerts = computed(() => tables.value.filter(t => t.alerts && t.alerts.length > 0))
+const alertsCount      = computed(() => tables.value.reduce((sum, t) => sum + (t.alerts?.length ?? 0), 0))
 
 const filterLabel = computed(() => {
   switch (activeFilter.value) {
@@ -236,6 +314,7 @@ const filterLabel = computed(() => {
   }
 })
 
+// ── Actions ───────────────────────────────────────────
 function onFilter(status: Table['status']) {
   activeFilter.value = activeFilter.value === status ? null : status
 }
@@ -272,4 +351,26 @@ function alertTextClass(alert: TableAlert) {
 <style scoped>
 .fade-enter-active, .fade-leave-active { transition: opacity 0.15s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.floor-tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--p-surface-300);
+  background: var(--p-surface-0);
+  color: var(--p-text-color-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+.floor-tab:hover  { background: var(--p-surface-100); color: var(--p-text-color); }
+.floor-tab.active {
+  background: var(--p-primary-color);
+  border-color: var(--p-primary-color);
+  color: #fff;
+}
 </style>

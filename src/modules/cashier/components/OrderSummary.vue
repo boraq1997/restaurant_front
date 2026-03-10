@@ -19,14 +19,14 @@
     <!-- قائمة المواد -->
     <div class="flex flex-column gap-2">
       <div
-        v-for="cartItem in table.order!.items"
-        :key="cartItem.menuItem.id"
+        v-for="(cartItem, index) in table.order!.items"
+        :key="index"
         class="surface-50 border-round-lg border-1 surface-border overflow-hidden"
       >
         <!-- الصنف الرئيسي -->
         <div
           class="flex align-items-center gap-3 p-3 cursor-pointer hover:surface-100 transition-all transition-duration-200"
-          @click="toggleItem(cartItem.menuItem.id)"
+          @click="toggleItem(index)"
         >
           <img
             :src="cartItem.menuItem.image || DEFAULT_IMAGE"
@@ -49,14 +49,14 @@
           </div>
           <i
             class="pi text-400 text-xs mr-1"
-            :class="expandedItems.includes(cartItem.menuItem.id) ? 'pi-angle-up' : 'pi-angle-down'"
+            :class="expandedItems.includes(index) ? 'pi-angle-up' : 'pi-angle-down'"
           />
         </div>
 
         <!-- التفاصيل عند الضغط -->
         <Transition name="expand">
           <div
-            v-if="expandedItems.includes(cartItem.menuItem.id)"
+            v-if="expandedItems.includes(index)"
             class="px-3 pb-3 flex flex-column gap-2 border-top-1 surface-border pt-2"
           >
 
@@ -156,18 +156,17 @@ import type { CartItem } from '../../../types/menu.types'
 
 const props = defineProps<{ table: CashierTable }>()
 
-// ── الصورة الافتراضية ─────────────────────────────────────────────────────────
-// غيّر المسار حسب موقع الصورة في مجلد public
-const DEFAULT_IMAGE = '/public/defaultImages/defaultFood.jpeg'
+const DEFAULT_IMAGE = '/defaultImages/defaultFood.jpeg'
 
+// ✅ إصلاح المشكلة: استخدام index بدلاً من menuItem.id
 const expandedItems = ref<number[]>([])
 
-function toggleItem(id: number) {
-  const index = expandedItems.value.indexOf(id)
-  if (index === -1) {
-    expandedItems.value.push(id)
+function toggleItem(index: number) {
+  const pos = expandedItems.value.indexOf(index)
+  if (pos === -1) {
+    expandedItems.value.push(index)
   } else {
-    expandedItems.value.splice(index, 1)
+    expandedItems.value.splice(pos, 1)
   }
 }
 
@@ -187,7 +186,6 @@ function itemTotal(cartItem: CartItem) {
 
 function onImageError(e: Event) {
   const img = e.target as HTMLImageElement
-  // منع الـ infinite loop: إذا فشلت الصورة الافتراضية نفسها نوقف المحاولة
   if (img.dataset.fallback === '1') return
   img.dataset.fallback = '1'
   img.src = DEFAULT_IMAGE

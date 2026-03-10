@@ -45,6 +45,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../../modules/cashier/pages/CashierHome.vue'),
     meta: { public: true },
   },
+  {
+    path: '/cashier/history',
+    name: 'cashier-order-history',
+    component: () => import('../../modules/cashier/components/OrderHistoryPage.vue'),
+    meta: { requiresAuth: true, role: 'cashier' }
+  },
 
   // ── الأدمن مع AdminLayout ──────────────────────────
   {
@@ -77,7 +83,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'tables',
         name: 'dashboard-tables',
-        component: () => import('../../modules/dashboard/tables/pages/tablesPage.vue'),
+        component: () => import('../../modules/dashboard/tables/pages/TablesPage.vue'),
       },
       {
         path: 'waiter',

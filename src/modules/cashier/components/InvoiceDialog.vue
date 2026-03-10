@@ -45,10 +45,79 @@
         </div>
       </div>
 
+      <!-- قسم الخصم -->
+      <div class="mb-4">
+        <div class="flex align-items-center justify-content-between mb-2">
+          <p class="font-bold text-sm m-0 text-color">خصم (اختياري)</p>
+          <div class="flex gap-1 surface-100 border-round-lg p-1">
+            <button
+              class="discount-type-btn"
+              :class="{ active: discountType === 0 }"
+              @click="discountType = 0; discountAmount = null"
+            >
+              <i class="pi pi-percentage text-xs" /> نسبة
+            </button>
+            <button
+              class="discount-type-btn"
+              :class="{ active: discountType === 1 }"
+              @click="discountType = 1; discountAmount = null"
+            >
+              <i class="pi pi-wallet text-xs" /> مبلغ
+            </button>
+          </div>
+        </div>
+
+        <div class="flex align-items-center gap-2">
+          <InputNumber
+            v-model="discountAmount"
+            :placeholder="discountType === 0 ? 'مثال: 10' : 'مثال: 5000'"
+            :suffix="discountType === 0 ? ' %' : ' د.ع'"
+            :min="0"
+            :max="discountType === 0 ? 100 : table.order.totalPrice"
+            fluid
+            class="flex-1"
+          />
+          <Button
+            v-if="discountAmount"
+            icon="pi pi-times"
+            severity="secondary"
+            text
+            rounded
+            size="small"
+            @click="discountAmount = null"
+          />
+        </div>
+
+        <!-- معاينة الخصم -->
+        <Transition name="fade">
+          <div
+            v-if="discountAmount && discountValue > 0"
+            class="mt-2 p-2 bg-orange-50 border-1 border-orange-200 border-round-lg flex justify-content-between align-items-center"
+          >
+            <span class="text-xs text-orange-700 font-medium">
+              الخصم ({{ discountType === 0 ? discountAmount + '%' : discountAmount?.toLocaleString() + ' د.ع' }})
+            </span>
+            <span class="text-xs font-bold text-orange-700">
+              - {{ discountValue.toLocaleString() }} د.ع
+            </span>
+          </div>
+        </Transition>
+
+        <!-- المبلغ النهائي بعد الخصم -->
+        <Transition name="fade">
+          <div
+            v-if="discountValue > 0"
+            class="mt-2 p-3 bg-green-50 border-1 border-green-300 border-round-xl flex justify-content-between align-items-center"
+          >
+            <span class="font-bold text-green-800 text-sm">المبلغ بعد الخصم</span>
+            <span class="font-bold text-xl text-green-700">{{ finalPrice.toLocaleString() }} د.ع</span>
+          </div>
+        </Transition>
+      </div>
+
       <!-- خيار العملات (نقدي فقط) -->
       <div v-if="selectedMethod === 'cash'" class="flex flex-column gap-3">
 
-        <!-- زر اختيار العملات -->
         <Button
           label="مساعدة في حساب العملات"
           icon="pi pi-wallet"
@@ -70,7 +139,7 @@
             </div>
             <div class="flex justify-content-between align-items-center">
               <span class="text-sm text-500">المبلغ المطلوب</span>
-              <span class="font-bold text-sm text-900">{{ table.order.totalPrice.toLocaleString() }} د.ع</span>
+              <span class="font-bold text-sm text-900">{{ finalPrice.toLocaleString() }} د.ع</span>
             </div>
             <Divider class="my-1" />
             <div
@@ -118,7 +187,7 @@
   <!-- Bills Dialog -->
   <BillsDialog
     v-model="billsDialogVisible"
-    :total-price="table?.order?.totalPrice ?? 0"
+    :total-price="finalPrice"
     @confirm="onBillsConfirm"
   />
 </template>
@@ -128,6 +197,7 @@ import { ref, computed, watch } from 'vue'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import Divider from 'primevue/divider'
+import InputNumber from 'primevue/inputnumber'
 import BillsDialog from './BillsDialog.vue'
 import type { CashierTable, PaymentMethod } from '../types/cashier.types'
 
@@ -138,7 +208,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
-  confirm: [method: PaymentMethod]
+  confirm: [payload: { method: PaymentMethod; discountType: number; discountAmount: number | null; finalPrice: number }]
 }>()
 
 const visible = computed({
@@ -149,11 +219,15 @@ const visible = computed({
 const selectedMethod     = ref<PaymentMethod>('cash')
 const receivedAmount     = ref(0)
 const billsDialogVisible = ref(false)
+const discountType       = ref<0 | 1>(0)   // 0 = نسبة، 1 = مبلغ ثابت
+const discountAmount     = ref<number | null>(null)
 
 watch(visible, (val) => {
   if (val) {
     selectedMethod.value = 'cash'
     receivedAmount.value = 0
+    discountType.value   = 0
+    discountAmount.value = null
   }
 })
 
@@ -163,14 +237,31 @@ const paymentMethods = [
   { value: 'online' as PaymentMethod, label: 'إلكتروني', icon: 'pi pi-mobile' },
 ]
 
-const change = computed(() =>
-  receivedAmount.value - (props.table?.order?.totalPrice ?? 0)
-)
+// حساب قيمة الخصم
+const discountValue = computed(() => {
+  if (!discountAmount.value || !props.table?.order) return 0
+  const total = props.table.order.totalPrice
+  if (discountType.value === 0) {
+    // نسبة مئوية
+    return Math.round((total * discountAmount.value) / 100)
+  } else {
+    // مبلغ ثابت
+    return Math.min(discountAmount.value, total)
+  }
+})
+
+// المبلغ النهائي بعد الخصم
+const finalPrice = computed(() => {
+  if (!props.table?.order) return 0
+  return Math.max(0, props.table.order.totalPrice - discountValue.value)
+})
+
+const change = computed(() => receivedAmount.value - finalPrice.value)
 
 const canConfirm = computed(() => {
   if (!props.table?.order) return false
   if (selectedMethod.value === 'cash' && receivedAmount.value > 0) {
-    return receivedAmount.value >= props.table.order.totalPrice
+    return receivedAmount.value >= finalPrice.value
   }
   return true
 })
@@ -180,7 +271,12 @@ function onBillsConfirm(amount: number) {
 }
 
 function confirmPayment() {
-  emit('confirm', selectedMethod.value)
+  emit('confirm', {
+    method:         selectedMethod.value,
+    discountType:   discountType.value,
+    discountAmount: discountAmount.value ?? null,
+    finalPrice:     finalPrice.value,
+  })
   visible.value = false
 }
 </script>
@@ -188,4 +284,25 @@ function confirmPayment() {
 <style scoped>
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.discount-type-btn {
+  padding: 0.3rem 0.75rem;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--p-text-color-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.discount-type-btn.active {
+  background: var(--p-surface-0);
+  color: var(--p-primary-color);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
 </style>

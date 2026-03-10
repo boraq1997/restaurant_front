@@ -7,28 +7,37 @@ import type {
   AddInvoiceItemRequestDto,
   EditOrderRequestDto,
   VoidItemRequestDto,
-  CheckoutRequestDto,
   MoveInvoiceRequestDto,
   TransferItemsRequestDto,
 } from '../types/api.types'
 
-// ─── DTOs إضافية للكاشير ─────────────────────────────────────────────────────
+// ─── DTOs ─────────────────────────────────────────────────────────────────────
+
+export interface CheckoutRequestDto {
+  invoiceId:        number
+  cashBoxSessionId?: number | null
+  paymentMethod:    number          // PaymentMethod enum: 0=Cash, 1=Card, 2=Online, 3=...
+  amountPaid:       number
+  discountType?:    number          // DiscountType: 0=نسبة مئوية, 1=مبلغ ثابت
+  discountAmount?:  number | null   // nullable
+  notes?:           string
+}
 
 export interface OpenCashBoxSessionRequestDto {
-  cashBoxId: number
+  cashBoxId:      number
   openingBalance: number
 }
 
 export interface CloseCashBoxSessionRequestDto {
   cashBoxSessionId: number
-  cashAmount: number
+  cashAmount:       number
 }
 
 export interface CashTransactionRequestDto {
   cashBoxSessionId: number
-  cashAmount: number
-  reason?: string
-  type: 0 | 1 | 2  // TransactionType: 0=In, 1=Out, 2=...
+  cashAmount:       number
+  reason?:          string
+  type:             0 | 1 | 2   // TransactionType: 0=In, 1=Out, 2=...
 }
 
 export interface MergeTablesRequestDto {
@@ -36,7 +45,7 @@ export interface MergeTablesRequestDto {
   targetTableId: number
 }
 
-// ─── Menu API ────────────────────────────────────────────────────────────────
+// ─── Menu API ─────────────────────────────────────────────────────────────────
 
 export const menuApi = {
   getAll: (): Promise<MenuCategoryApi[]> =>
@@ -46,7 +55,7 @@ export const menuApi = {
     apiClient.get('/menu/all'),
 }
 
-// ─── Table API ───────────────────────────────────────────────────────────────
+// ─── Table API ────────────────────────────────────────────────────────────────
 
 export const tableApi = {
   getAll: (): Promise<TableApi[]> =>
@@ -66,7 +75,7 @@ export const tableApi = {
     apiClient.post('/tables/merge', dto),
 }
 
-// ─── Order API ───────────────────────────────────────────────────────────────
+// ─── Order API ────────────────────────────────────────────────────────────────
 
 export const orderApi = {
   getById: (id: number): Promise<InvoiceApi> =>
@@ -76,18 +85,15 @@ export const orderApi = {
   addItem: (dto: AddInvoiceItemRequestDto): Promise<InvoiceApi> =>
     apiClient.post('/order/add-item', dto),
 
-  /** تعديل بيانات الطلب (خصم / ملاحظات / نوع الطلب) */
+  /** تعديل بيانات الطلب */
   editOrder: (dto: EditOrderRequestDto): Promise<InvoiceApi> =>
     apiClient.put('/order/edit-order', dto),
 
-  /**
-   * إلغاء صنف من الفاتورة
-   * ⚠️ هذا هو الطريق الصحيح — لا يوجد remove-item في الـ API
-   */
+  /** إلغاء صنف من الفاتورة */
   voidItem: (dto: VoidItemRequestDto): Promise<void> =>
     apiClient.post('/order/void-item', dto),
 
-  /** إتمام الدفع */
+  /** إتمام الدفع - يدعم الخصم وربط الجلسة */
   checkout: (dto: CheckoutRequestDto): Promise<void> =>
     apiClient.post('/order/checkout', dto),
 
@@ -101,18 +107,18 @@ export const orderApi = {
 
   /** سجل الفواتير مع فلترة */
   getHistory: (params?: {
-    StartDate?: string
-    EndDate?: string
-    Status?: number
-    TableId?: number
-    CustomerId?: number
-    PageNumber?: number
-    PageSize?: number
+    StartDate?:   string
+    EndDate?:     string
+    Status?:      number
+    TableId?:     number
+    CustomerId?:  number
+    PageNumber?:  number
+    PageSize?:    number
   }): Promise<any> =>
     apiClient.get('/order/history', params),
 }
 
-// ─── CashBox API ─────────────────────────────────────────────────────────────
+// ─── CashBox API ──────────────────────────────────────────────────────────────
 
 export const cashBoxApi = {
   /** فتح جلسة صندوق */
@@ -123,7 +129,7 @@ export const cashBoxApi = {
   closeSession: (dto: CloseCashBoxSessionRequestDto): Promise<any> =>
     apiClient.post('/cashbox/closesession', dto),
 
-  /** تسجيل معاملة نقدية (إيداع/سحب) */
+  /** تسجيل معاملة نقدية */
   recordTransaction: (dto: CashTransactionRequestDto): Promise<any> =>
     apiClient.post('/cashbox/recordtransaction', dto),
 
