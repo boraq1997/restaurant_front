@@ -123,10 +123,12 @@ const note = ref('')
 const qty = ref(1)
 
 // إعادة تعيين عند تغيير المنتج
-watch(() => props.item, () => {
-  selectedOptions.value = []
-  note.value = ''
-  qty.value = 1
+watch(() => [props.item, props.modelValue], ([, isVisible]) => {
+  if (isVisible) {
+    selectedOptions.value = []
+    note.value = ''
+    qty.value = 1
+  }
 })
 
 const totalPrice = computed(() => {
@@ -148,11 +150,15 @@ function toggleOption(option: MenuOptionApi) {
 function addToCart() {
   if (!props.item) return
   emit('add', {
-    menuItem: props.item,
-    quantity: qty.value,
+    menuItem:        props.item,
+    quantity:        qty.value,
     selectedOptions: [...selectedOptions.value],
-    note: note.value,
+    note:            note.value,
   })
+  // ✅ إعادة تعيين بعد الإضافة
+  selectedOptions.value = []
+  note.value = ''
+  qty.value = 1
   visible.value = false
 }
 </script>

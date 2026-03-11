@@ -179,9 +179,9 @@
               </div>
               <div class="flex align-items-center justify-content-between">
                 <div class="flex align-items-center gap-2">
-                  <Button icon="pi pi-minus" rounded text size="small" @click="decreaseItem(cartItem.menuItem.id)" />
+                  <Button icon="pi pi-minus" rounded text size="small" @click="decreaseItem(idx)" />
                   <span class="font-bold text-sm">{{ cartItem.quantity }}</span>
-                  <Button icon="pi pi-plus" rounded text size="small" @click="increaseItem(cartItem.menuItem.id)" />
+                  <Button icon="pi pi-plus" rounded text size="small" @click="increaseItem(idx)" />
                 </div>
                 <span class="text-primary font-bold text-sm">{{ itemTotal(cartItem) }} د.ع</span>
               </div>
@@ -296,7 +296,7 @@ import { useToast } from 'primevue/usetoast'
 import { menuApi, orderApi, tableApi } from '../../../services/api.service'
 import type { MenuCategoryApi, MenuItemApi, InvoiceApi } from '../../../types/api.types'
 import type { CartItemLocal } from '../../../components/shared/menu/MenuItemDialog.vue'
-import { useAuthStore } from '../../auth/store/auth.store' // عدّل المسار حسب مشروعك
+import { useAuthStore } from '../../auth/store/auth.store'
 import { useRouter } from 'vue-router'
 
 import MenuCategory from '../../../components/shared/menu/MenuCategory.vue'
@@ -316,9 +316,9 @@ import ProgressSpinner from 'primevue/progressspinner'
 const CUSTOMER_ID = 1
 
 // ── composables ────────────────────────────────────────
-const route = useRoute()
-const router = useRouter()
-const toast = useToast()
+const route     = useRoute()
+const router    = useRouter()
+const toast     = useToast()
 const authStore = useAuthStore()
 
 // ── state ──────────────────────────────────────────────
@@ -341,23 +341,31 @@ const updatingId         = ref<number | null>(null)
 const updatingAction     = ref<string | null>(null)
 
 // ── computed ───────────────────────────────────────────
-const tableId     = computed(() => route.params.id ? Number(route.params.id) : tableData.value?.id ?? null)
+const isWaiterRoute = computed(() => !!route.params.id)
+
+const tableId = computed(() =>
+  route.params.id ? Number(route.params.id) : tableData.value?.id ?? null
+)
+
 const tableNumber = computed(() =>
   tableData.value?.tableNumber ?? tableData.value?.number ?? tableId.value ?? route.params.token
 )
-const isWaiterRoute = computed(() => !!route.params.id)
+
 const existingTotal = computed(() =>
   existingItems.value.reduce((s, i) => s + (i.total ?? i.price * i.quantity), 0)
 )
 
 const activeCategories = computed<MenuCategoryApi[]>(() =>
-  allCategories.value.filter(c => c.isActive && c.menuItems?.some(i => i.isAvailable))
+  allCategories.value.filter(c => {
+    const isActive = c.isActive === undefined ? true : c.isActive
+    return isActive && c.menuItems?.length > 0
+  })
 )
 
 const filteredItems = computed<MenuItemApi[]>(() => {
   if (!selectedCategoryId.value) return []
   const cat = allCategories.value.find(c => c.id === selectedCategoryId.value)
-  return cat?.menuItems?.filter(i => i.isAvailable) ?? []
+  return cat?.menuItems?.filter(i => i.isAvailable === undefined ? true : i.isAvailable) ?? []
 })
 
 const totalCartCount = computed(() =>
@@ -374,82 +382,137 @@ function itemTotal(item: CartItemLocal) {
   return (item.menuItem.price + optionsTotal) * item.quantity
 }
 
-function invoiceStatusLabel(status: number) {
-  switch (status) {
-    case 0: return 'مفتوح'
-    case 1: return 'مدفوع'
-    case 2: return 'ملغي'
-    case 3: return 'محوّل'
-    default: return 'غير معروف'
-  }
+function invoiceStatusLabel(status: string | number) {
+  if (status === 'Pending'   || status === 0) return 'مفتوح'
+  if (status === 'Paid'      || status === 1) return 'مدفوع'
+  if (status === 'Cancelled' || status === 2) return 'ملغي'
+  if (status === 'Refunded'  || status === 3) return 'محوّل'
+  return 'غير معروف'
 }
 
-function invoiceStatusSeverity(status: number): 'warn' | 'success' | 'danger' | 'secondary' {
-  switch (status) {
-    case 0: return 'warn'
-    case 1: return 'success'
-    case 2: return 'danger'
-    default: return 'secondary'
-  }
+function invoiceStatusSeverity(status: string | number): 'warn' | 'success' | 'danger' | 'secondary' {
+  if (status === 'Pending'   || status === 0) return 'warn'
+  if (status === 'Paid'      || status === 1) return 'success'
+  if (status === 'Cancelled' || status === 2) return 'danger'
+  return 'secondary'
 }
 
-// ── helper: تحديث existingItems من API ────────────────
+// ── refreshInvoices ────────────────────────────────────
 async function refreshInvoices() {
-  if (!tableId.value) return
-  const invoices = await tableApi.getInvoices(tableId.value)
-  const rawInvoices = Array.isArray(invoices) ? invoices : []
-  tableInvoices.value = rawInvoices.map((inv: any) => ({
-    ...inv,
-    status:     inv.invoiceStatus ?? inv.status ?? 0,
-    totalPrice: inv.finalPrice    ?? inv.totalPrice ?? 0,
-    items:      inv.invoiceItemsDto ?? inv.items ?? [],
-  }))
-  const openInvoice = tableInvoices.value.find(inv => inv.status === 0)
-  if (openInvoice) {
-    currentInvoiceId.value = openInvoice.id
-    const invoiceItems = openInvoice.items ?? openInvoice.invoiceItemsDto ?? []
-    existingItems.value = invoiceItems.map((item: any) => ({
-      id:       item.id,
-      name:     item.menuItemName,
-      quantity: item.quantity,
-      price:    item.price,
-      total:    item.totalPrice,
+  if (isWaiterRoute.value) {
+    // ── ويتر/أدمن: يجلب عبر tableId ──
+    if (!tableId.value) return
+    const invoices   = await tableApi.getInvoices(tableId.value)
+    const rawInvoices = Array.isArray(invoices) ? invoices : []
+
+    tableInvoices.value = rawInvoices.map((inv: any) => ({
+      ...inv,
+      status:     inv.invoiceStatus ?? inv.status ?? 0,
+      totalPrice: inv.finalPrice    ?? inv.totalPrice ?? 0,
+      items:      inv.invoiceItemsDto ?? inv.items ?? [],
     }))
-    showPrevOrders.value = true
+
+    const openInvoice = tableInvoices.value.find(inv =>
+      inv.status === 'Pending' || inv.status === 0
+    )
+
+    if (openInvoice) {
+      currentInvoiceId.value = openInvoice.id
+      const invoiceItems     = openInvoice.items ?? openInvoice.invoiceItemsDto ?? []
+      existingItems.value    = invoiceItems.map((item: any) => ({
+        id:       item.id,
+        name:     item.menuItemName,
+        quantity: item.quantity,
+        price:    item.price,
+        total:    item.totalPrice,
+      }))
+      showPrevOrders.value = true
+    } else {
+      currentInvoiceId.value = null
+      existingItems.value    = []
+      showPrevOrders.value   = false
+    }
+
   } else {
-    existingItems.value = []
+    // ── زبون: يجلب عبر invoiceId المحفوظ ──
+    if (!currentInvoiceId.value) return
+    try {
+      const invoice = await orderApi.getById(currentInvoiceId.value)
+      if (!invoice) return
+
+      const isPending = invoice.invoiceStatus === 'Pending' || (invoice as any).status === 0
+      if (isPending) {
+        const items     = (invoice as any).invoiceItemsDto ?? (invoice as any).items ?? []
+        existingItems.value = items.map((item: any) => ({
+          id:       item.id,
+          name:     item.menuItemName,
+          quantity: item.quantity,
+          price:    item.price,
+          total:    item.totalPrice,
+        }))
+      } else {
+        // الفاتورة أُغلقت - امسح المحفوظ
+        localStorage.removeItem(`invoice_${route.params.token}`)
+        currentInvoiceId.value = null
+        existingItems.value    = []
+      }
+    } catch {
+      existingItems.value = []
+    }
   }
 }
 
 // ── lifecycle ──────────────────────────────────────────
 onMounted(async () => {
   try {
-    const isWaiterRoute = !!route.params.id
-    let tableRes: any
-    let menuRes: any
-
-    if (isWaiterRoute) {
-      ;[tableRes, menuRes] = await Promise.all([
+    if (isWaiterRoute.value) {
+      const [tableRes, menuRes] = await Promise.all([
         tableApi.getById(Number(route.params.id)),
         menuApi.getAll(),
       ])
+      tableData.value     = tableRes
+      allCategories.value = Array.isArray(menuRes) ? menuRes : []
       try {
         await refreshInvoices()
       } catch {
         tableInvoices.value = []
       }
+
     } else {
-      const res = await tableApi.getByToken(route.params.token as string)
+      // ── زبون عبر QR ──
+      const res           = await tableApi.getByToken(route.params.token as string)
       tableData.value     = res
       allCategories.value = res.menu ?? []
-    }
 
-    tableData.value     = tableRes
-    allCategories.value = Array.isArray(menuRes) ? menuRes : []
+      // جلب الفاتورة المحفوظة للزبون
+      const savedInvoiceId = localStorage.getItem(`invoice_${route.params.token}`)
+      if (savedInvoiceId) {
+        try {
+          const invoice = await orderApi.getById(Number(savedInvoiceId))
+          const isPending = invoice?.invoiceStatus === 'Pending' || (invoice as any)?.status === 0
+          if (invoice && isPending) {
+            currentInvoiceId.value = invoice.id
+            const items = (invoice as any).invoiceItemsDto ?? (invoice as any).items ?? []
+            existingItems.value = items.map((item: any) => ({
+              id:       item.id,
+              name:     item.menuItemName,
+              quantity: item.quantity,
+              price:    item.price,
+              total:    item.totalPrice,
+            }))
+          } else {
+            localStorage.removeItem(`invoice_${route.params.token}`)
+          }
+        } catch {
+          localStorage.removeItem(`invoice_${route.params.token}`)
+        }
+      }
+    }
 
     if (activeCategories.value.length > 0) {
       selectedCategoryId.value = activeCategories.value[0].id
     }
+
   } catch {
     toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل تحميل البيانات، يرجى تحديث الصفحة', life: 4000 })
   } finally {
@@ -477,18 +540,18 @@ function onDialogAdd(cartItem: CartItemLocal) {
   }
 }
 
-function increaseItem(id: number) {
-  const item = cartItems.value.find(i => i.menuItem.id === id)
-  if (item) item.quantity++
+function increaseItem(itemIndex: number) {
+  if (cartItems.value[itemIndex]) {
+    cartItems.value[itemIndex].quantity++
+  }
 }
 
-function decreaseItem(id: number) {
-  const idx = cartItems.value.findIndex(i => i.menuItem.id === id)
-  if (idx === -1) return
-  if (cartItems.value[idx].quantity > 1) {
-    cartItems.value[idx].quantity--
+function decreaseItem(itemIndex: number) {
+  if (itemIndex === -1) return
+  if (cartItems.value[itemIndex].quantity > 1) {
+    cartItems.value[itemIndex].quantity--
   } else {
-    cartItems.value.splice(idx, 1)
+    cartItems.value.splice(itemIndex, 1)
   }
 }
 
@@ -496,7 +559,7 @@ async function removeExistingItem(itemId: number) {
   updatingId.value     = itemId
   updatingAction.value = 'delete'
   try {
-    await orderApi.removeItem(itemId)
+    await orderApi.voidItem({ invoiceItemId: itemId, voidReason: null })
     await refreshInvoices()
   } catch {
     toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل حذف المادة', life: 3000 })
@@ -512,7 +575,15 @@ async function updateExistingItemQty(itemId: number, newQty: number) {
   updatingId.value     = itemId
   updatingAction.value = action
   try {
-    await orderApi.updateItem(itemId, newQty)
+    await orderApi.addItem({
+      invoiceId:           currentInvoiceId.value,
+      tableId:             tableId.value!,
+      customerId:          CUSTOMER_ID,
+      menuItemId:          0,
+      quantity:            newQty,
+      notes:               null,
+      selectedItemOptions: [],
+    })
     await refreshInvoices()
   } catch {
     toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل تعديل الكمية', life: 3000 })
@@ -523,29 +594,49 @@ async function updateExistingItemQty(itemId: number, newQty: number) {
 }
 
 async function submitOrder() {
-  if (!cartItems.value.length || !tableId.value) return
+  if (!cartItems.value.length) return
   submitting.value = true
   try {
-    for (const item of cartItems.value) {
-      if (!item.menuItem.id || item.menuItem.id === 0) continue
-      const res = await orderApi.addItem({
-        invoiceId:           currentInvoiceId.value,
-        tableId:             tableId.value,
-        customerId:          CUSTOMER_ID,
-        menuItemId:          item.menuItem.id,
-        quantity:            item.quantity,
-        notes:               item.note || null,
-        selectedItemOptions: item.selectedOptions.map((o: any) => o.id),
-      })
-      if (!currentInvoiceId.value && res?.id) {
+    if (!isWaiterRoute.value) {
+      // ── زبون عبر QR ──
+      const token = route.params.token as string
+      const items = cartItems.value.map(item => ({
+        menuItemId: item.menuItem.id,
+        quantity:   item.quantity,
+        optionIds:  item.selectedOptions.map((o: any) => o.id),
+        notes:      item.note || undefined,
+      }))
+      const res = await customerApi.submitOrder(token, items)
+      
+      // احفظ invoiceId إن رجع
+      if (res?.id) {
         currentInvoiceId.value = res.id
+        localStorage.setItem(`invoice_${token}`, String(res.id))
+      }
+    } else {
+      // ── ويتر/أدمن ──
+      if (!tableId.value) return
+      for (const item of cartItems.value) {
+        if (!item.menuItem.id || item.menuItem.id === 0) continue
+        const res = await orderApi.addItem({
+          invoiceId:           currentInvoiceId.value,
+          tableId:             tableId.value,
+          customerId:          CUSTOMER_ID,
+          menuItemId:          item.menuItem.id,
+          quantity:            item.quantity,
+          notes:               item.note || null,
+          selectedItemOptions: item.selectedOptions.map((o: any) => o.id),
+        })
+        if (!currentInvoiceId.value && res?.id) {
+          currentInvoiceId.value = res.id
+        }
       }
     }
 
     lastSubmittedItems.value = [...cartItems.value]
-    cartItems.value = []
+    cartItems.value          = []
     cartRef.value?.closeDrawer()
-    successVisible.value = true
+    successVisible.value     = true
 
     try { await refreshInvoices() } catch { /* تجاهل */ }
 
@@ -557,8 +648,6 @@ async function submitOrder() {
 }
 
 function goBack() {
-  console.log('roleName:', authStore.userRole)
-  
   if (authStore.userRole === 'Admin') {
     router.push('/dashboard/waiter')
   } else {

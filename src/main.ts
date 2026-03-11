@@ -2,7 +2,6 @@
 import { createApp } from 'vue';
 import {createPinia} from 'pinia';
 import { definePreset } from '@primeuix/themes'
-import { initDarkMode } from './app/plugins/darkMode'
 
 // Import the global CSS styles for the application
 import './style.css';
@@ -55,28 +54,6 @@ const MyPreset = definePreset(Aura, {
       900: '{orange.900}',
       950: '{orange.950}'
     },
-
-    // ألوان الخلفيات (Light & Dark)
-    colorScheme: {
-      light: {
-        surface: {
-          0: '#ffffff',
-          50: '#f9fafb',
-          100: '#f3f4f6',
-          200: '#e5e7eb',
-          300: '#d1d5db'
-        }
-      },
-      dark: {
-        surface: {
-          0: '#121212',
-          50: '#1e1e1e',
-          100: '#2a2a2a',
-          200: '#333333',
-          300: '#3d3d3d'
-        }
-      }
-    }
   }
 })
 
@@ -93,7 +70,6 @@ app.use(PrimeVue, {
     }
   },
 });
-initDarkMode()
 
 
 // Register the ToastService for displaying toast notifications

@@ -6,3 +6,7 @@ html {
   background-color: var(--p-surface-0);
   color: var(--p-text-color);
 }
+
+* {
+  touch-action: manipulation;
+} 

@@ -2,69 +2,66 @@
   <div class="min-h-screen surface-50" dir="rtl">
 
     <!-- Header -->
-    <header class="surface-card shadow-1 sticky top-0 z-5 border-bottom-1 border-200">
-      <div class="px-3 py-3">
+    <header class="surface-card shadow-1 sticky top-0 z-5 border-bottom-1 border-200" style="transition: all 0.25s ease;">
+  <div class="px-3 py-3">
 
-        <div class="flex align-items-center justify-content-between mb-3">
-          <div class="flex align-items-center gap-2">
-            <div class="w-2rem h-2rem border-round-lg bg-primary flex align-items-center justify-content-center">
-              <i class="pi pi-shop text-white text-sm"></i>
-            </div>
-            <div>
-              <p class="font-bold text-base m-0 text-900 line-height-1">مطعمنا</p>
-              <span class="text-xs text-500">الويتر</span>
-            </div>
+    <!-- يختفي عند السكرول -->
+    <Transition name="slide-up">
+      <div v-if="!isScrolled" class="flex align-items-center justify-content-between mb-3">
+        <div class="flex align-items-center gap-2">
+          <div class="w-2rem h-2rem border-round-lg bg-primary flex align-items-center justify-content-center">
+            <i class="pi pi-shop text-white text-sm"></i>
           </div>
-
-          <div class="flex align-items-center gap-2">
-            <Button
-              v-if="alertsCount > 0"
-              icon="pi pi-bell"
-              :badge="String(alertsCount)"
-              badge-severity="danger"
-              severity="danger"
-              text
-              rounded
-              @click="showAlerts = true"
-            />
-            <div class="flex align-items-center gap-1 surface-100 px-2 py-1 border-round-lg">
-              <i class="pi pi-clock text-primary text-xs"></i>
-              <span class="text-xs font-bold text-primary">{{ currentTime }}</span>
-              <LogoutButton />
-            </div>
+          <div>
+            <p class="font-bold text-base m-0 text-900 line-height-1">مطعمنا</p>
+            <span class="text-xs text-500">الويتر</span>
           </div>
         </div>
 
-        <TableStatsBar
-          :available="availableCount"
-          :occupied="occupiedCount"
-          :reserved="reservedCount"
-          :active-filter="activeFilter"
-          @filter="onFilter"
-        />
-
-        <!-- Floors Tab Bar - يظهر فقط إذا كان هناك طوابق -->
-        <div v-if="hasFloors" class="flex gap-2 overflow-x-auto pt-3 pb-1" style="scrollbar-width: none;">
-          <button
-            class="floor-tab"
-            :class="{ active: selectedFloorId === null }"
-            @click="selectedFloorId = null"
-          >
-            الكل
-          </button>
-          <button
-            v-for="floor in floors"
-            :key="floor.id"
-            class="floor-tab"
-            :class="{ active: selectedFloorId === floor.id }"
-            @click="selectedFloorId = floor.id"
-          >
-            {{ floor.name }}
-          </button>
+        <div class="flex align-items-center gap-2">
+          <Button
+            v-if="alertsCount > 0"
+            icon="pi pi-bell"
+            :badge="String(alertsCount)"
+            badge-severity="danger"
+            severity="danger"
+            text rounded
+            @click="showAlerts = true"
+          />
+          <div class="flex align-items-center gap-1 surface-100 px-2 py-1 border-round-lg">
+            <i class="pi pi-clock text-primary text-xs"></i>
+            <span class="text-xs font-bold text-primary">{{ currentTime }}</span>
+            <LogoutButton />
+          </div>
         </div>
-
       </div>
-    </header>
+    </Transition>
+
+    <TableStatsBar
+      :available="availableCount"
+      :occupied="occupiedCount"
+      :reserved="reservedCount"
+      :active-filter="activeFilter"
+      :compact="isScrolled"
+      @filter="onFilter"
+    />
+
+    <!-- Floors Tab Bar -->
+    <div v-if="hasFloors" class="flex gap-2 overflow-x-auto pt-3 pb-1" style="scrollbar-width: none;">
+      <button class="floor-tab" :class="{ active: selectedFloorId === null }" @click="selectedFloorId = null">
+        الكل
+      </button>
+      <button
+        v-for="floor in floors" :key="floor.id"
+        class="floor-tab" :class="{ active: selectedFloorId === floor.id }"
+        @click="selectedFloorId = floor.id"
+      >
+        {{ floor.name }}
+      </button>
+    </div>
+
+  </div>
+</header>
 
     <!-- Main -->
     <main class="px-3 pt-3 pb-6">
@@ -216,15 +213,25 @@ const loading        = ref(true)
 const tables         = ref<Table[]>([])
 const floors         = ref<Floor[]>([])
 const selectedFloorId = ref<number | null>(null)
+const isScrolled = ref(false)
+
+function handleScroll() {
+  isScrolled.value = window.scrollY > 80
+}
 
 let timer: ReturnType<typeof setInterval>
 
 onMounted(async () => {
   updateTime()
   timer = setInterval(updateTime, 1000)
+  window.addEventListener('scroll', handleScroll)
   await loadTables()
 })
-onUnmounted(() => clearInterval(timer))
+
+onUnmounted(() => {
+  clearInterval(timer)
+  window.removeEventListener('scroll', handleScroll)
+})
 
 async function loadTables() {
   loading.value = true
@@ -254,11 +261,13 @@ async function loadTables() {
   }
 }
 
-function mapStatus(status: number): Table['status'] {
-  switch (status) {
-    case 1:  return 'occupied'
-    case 2:  return 'reserved'
-    default: return 'available'
+function mapStatus(status: string | number): Table['status'] {
+  const s = typeof status === 'string' ? status.toLowerCase() : status
+  switch (s) {
+    case 'occupied': case 1: return 'occupied'
+    case 'reserved': case 2: return 'reserved'
+    case 'merged':            return 'occupied' // merged تعتبر مشغولة
+    default:                  return 'available'
   }
 }
 
@@ -372,5 +381,19 @@ function alertTextClass(alert: TableAlert) {
   background: var(--p-primary-color);
   border-color: var(--p-primary-color);
   color: #fff;
+}
+
+.slide-up-enter-active, .slide-up-leave-active {
+  transition: all 0.25s ease;
+  overflow: hidden;
+}
+.slide-up-enter-from, .slide-up-leave-to {
+  opacity: 0;
+  max-height: 0;
+  margin-bottom: 0 !important;
+}
+.slide-up-enter-to, .slide-up-leave-from {
+  opacity: 1;
+  max-height: 60px;
 }
 </style>

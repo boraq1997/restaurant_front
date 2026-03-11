@@ -3,102 +3,101 @@
   <div class="min-h-screen surface-50" dir="rtl">
 
     <!-- Header -->
-    <header class="surface-card shadow-1 sticky top-0 z-5 border-bottom-1 border-200">
+    <header class="surface-card shadow-1 sticky top-0 z-5 border-bottom-1 border-200" 
+            style="transition: all 0.25s ease;">
       <div class="px-3 py-3">
 
-        <div class="flex align-items-center justify-content-between mb-3">
-          <div class="flex align-items-center gap-2">
-            <div class="w-2rem h-2rem border-round-lg bg-primary flex align-items-center justify-content-center">
-              <i class="pi pi-shop text-white text-sm" />
+        <!-- يختفي عند السكرول -->
+        <Transition name="slide-up">
+          <div v-if="!isScrolled" class="flex align-items-center justify-content-between mb-3">
+            <div class="flex align-items-center gap-2">
+              <div class="w-2rem h-2rem border-round-lg bg-primary flex align-items-center justify-content-center">
+                <i class="pi pi-shop text-white text-sm" />
+              </div>
+              <div>
+                <p class="font-bold text-base m-0 text-900 line-height-1">مطعمنا</p>
+                <span class="text-xs text-500">الكاشير</span>
+              </div>
             </div>
-            <div>
-              <p class="font-bold text-base m-0 text-900 line-height-1">مطعمنا</p>
-              <span class="text-xs text-500">الكاشير</span>
-            </div>
-          </div>
 
-          <div class="flex align-items-center gap-2">
-
-            <!-- مؤشر حالة الجلسة -->
-            <div
-              class="flex align-items-center gap-1 px-2 py-1 border-round-lg border-1 cursor-pointer transition-all"
-              :class="activeSession
-                ? 'bg-green-50 border-green-300'
-                : 'bg-red-50 border-red-300'"
-              @click="activeSession ? openCloseSession() : openOpenSession()"
-            >
+            <div class="flex align-items-center gap-2">
               <div
-                class="w-1rem h-1rem border-round-full"
-                :class="activeSession ? 'bg-green-500' : 'bg-red-400'"
-                style="animation: blink 2s infinite;"
-              />
-              <span
-                class="text-xs font-bold"
-                :class="activeSession ? 'text-green-700' : 'text-red-600'"
+                class="flex align-items-center gap-1 px-2 py-1 border-round-lg border-1 cursor-pointer transition-all"
+                :class="activeSession ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'"
+                @click="activeSession ? openCloseSession() : openOpenSession()"
               >
-                {{ activeSession ? 'جلسة مفتوحة' : 'لا توجد جلسة' }}
-              </span>
-            </div>
+                <div
+                  class="w-1rem h-1rem border-round-full"
+                  :class="activeSession ? 'bg-green-500' : 'bg-red-400'"
+                  style="animation: blink 2s infinite;"
+                />
+                <span class="text-xs font-bold" :class="activeSession ? 'text-green-700' : 'text-red-600'">
+                  {{ activeSession ? 'جلسة مفتوحة' : 'لا توجد جلسة' }}
+                </span>
+              </div>
 
-            <!-- زر سجل الطلبات -->
-            <Button
-              icon="pi pi-history"
-              text rounded
-              severity="secondary"
-              size="small"
-              v-tooltip.bottom="'سجل الطلبات'"
-              @click="goToHistory"
-            />
+              <Button icon="pi pi-history" text rounded severity="secondary" size="small"
+                v-tooltip.bottom="'سجل الطلبات'" @click="goToHistory" />
 
-            <div class="flex align-items-center gap-1 surface-100 px-2 py-1 border-round-lg">
-              <i class="pi pi-clock text-primary text-xs" />
-              <span class="text-xs font-bold text-primary">{{ currentTime }}</span>
-              <LogoutButton @before-logout="handleBeforeLogout" />
+              <div class="flex align-items-center gap-1 surface-100 px-2 py-1 border-round-lg">
+                <i class="pi pi-clock text-primary text-xs" />
+                <span class="text-xs font-bold text-primary">{{ currentTime }}</span>
+                <LogoutButton @before-logout="handleBeforeLogout" />
+              </div>
             </div>
           </div>
-        </div>
+        </Transition>
 
         <!-- Stats Bar -->
         <div class="flex gap-2 overflow-x-auto pb-1">
           <div
-            class="flex align-items-center gap-2 px-3 py-2 border-round-xl border-1 cursor-pointer flex-shrink-0 transition-all transition-duration-200"
-            :class="activeFilter === 'unpaid' ? 'bg-red-100 border-red-400' : 'surface-card border-transparent shadow-1'"
+            class="stats-card flex align-items-center gap-2 border-round-xl border-1 cursor-pointer flex-shrink-0"
+            :class="[
+              isScrolled ? 'px-2 py-1' : 'px-3 py-2',
+              activeFilter === 'unpaid' ? 'bg-red-100 border-red-400' : 'surface-card border-transparent shadow-1'
+            ]"
             @click="onFilter('unpaid')"
           >
-            <div class="flex align-items-center justify-content-center bg-red-100 border-round" style="width:2rem; height:2rem">
-              <i class="pi pi-times-circle text-red-600" />
-            </div>
+            <i class="pi pi-times-circle text-red-600" :class="isScrolled ? 'text-sm' : ''" />
             <div class="flex flex-column">
-              <span class="text-xs text-500">غير مدفوع</span>
-              <span class="text-lg font-bold text-900 line-height-1">{{ unpaidCount }}</span>
+              <span v-if="!isScrolled" class="text-xs text-500">غير مدفوع</span>
+              <span :class="isScrolled ? 'text-sm font-bold text-900' : 'text-lg font-bold text-900 line-height-1'">
+                {{ unpaidCount }}
+              </span>
             </div>
           </div>
 
           <div
-            class="flex align-items-center gap-2 px-3 py-2 border-round-xl border-1 cursor-pointer flex-shrink-0 transition-all transition-duration-200"
-            :class="activeFilter === 'paid' ? 'bg-green-100 border-green-400' : 'surface-card border-transparent shadow-1'"
+            class="stats-card flex align-items-center gap-2 border-round-xl border-1 cursor-pointer flex-shrink-0"
+            :class="[
+              isScrolled ? 'px-2 py-1' : 'px-3 py-2',
+              activeFilter === 'paid' ? 'bg-green-100 border-green-400' : 'surface-card border-transparent shadow-1'
+            ]"
             @click="onFilter('paid')"
           >
-            <div class="flex align-items-center justify-content-center bg-green-100 border-round" style="width:2rem; height:2rem">
-              <i class="pi pi-check-circle text-green-600" />
-            </div>
+            <i class="pi pi-check-circle text-green-600" :class="isScrolled ? 'text-sm' : ''" />
             <div class="flex flex-column">
-              <span class="text-xs text-500">مدفوع</span>
-              <span class="text-lg font-bold text-900 line-height-1">{{ paidCount }}</span>
+              <span v-if="!isScrolled" class="text-xs text-500">مدفوع</span>
+              <span :class="isScrolled ? 'text-sm font-bold text-900' : 'text-lg font-bold text-900 line-height-1'">
+                {{ paidCount }}
+              </span>
             </div>
           </div>
 
           <div
-            class="flex align-items-center gap-2 px-3 py-2 border-round-xl border-1 cursor-pointer flex-shrink-0 transition-all transition-duration-200"
-            :class="activeFilter === 'empty' ? 'bg-blue-100 border-blue-400' : 'surface-card border-transparent shadow-1'"
+            class="stats-card flex align-items-center gap-2 border-round-xl border-1 cursor-pointer flex-shrink-0"
+            :class="[
+              isScrolled ? 'px-2 py-1' : 'px-3 py-2',
+              activeFilter === 'empty' ? 'bg-blue-100 border-blue-400' : 'surface-card border-transparent shadow-1'
+            ]"
             @click="onFilter('empty')"
           >
-            <div class="flex align-items-center justify-content-center bg-blue-100 border-round" style="width:2rem; height:2rem">
-              <i class="pi pi-th-large text-blue-600" />
-            </div>
+            <i class="pi pi-th-large text-blue-600" :class="isScrolled ? 'text-sm' : ''" />
             <div class="flex flex-column">
-              <span class="text-xs text-500">فارغة</span>
-              <span class="text-lg font-bold text-900 line-height-1">{{ emptyCount }}</span>
+              <span v-if="!isScrolled" class="text-xs text-500">فارغة</span>
+              <span :class="isScrolled ? 'text-sm font-bold text-900' : 'text-lg font-bold text-900 line-height-1'">
+                {{ emptyCount }}
+              </span>
             </div>
           </div>
         </div>
@@ -137,13 +136,7 @@
           <p class="m-0 font-bold text-orange-800 text-sm">لا توجد جلسة مفتوحة</p>
           <p class="m-0 text-orange-600 text-xs mt-1">يجب فتح جلسة لتتمكن من إتمام عمليات الدفع</p>
         </div>
-        <Button
-          label="فتح جلسة"
-          icon="pi pi-lock-open"
-          severity="warning"
-          size="small"
-          @click="openOpenSession"
-        />
+        <Button label="فتح جلسة" icon="pi pi-lock-open" severity="warning" size="small" @click="openOpenSession" />
       </div>
     </Transition>
 
@@ -166,13 +159,7 @@
             </div>
           </Tag>
         </div>
-        <Button
-          icon="pi pi-refresh"
-          :loading="isRefreshing"
-          severity="secondary"
-          text rounded size="small"
-          @click="refresh"
-        />
+        <Button icon="pi pi-refresh" :loading="isRefreshing" severity="secondary" text rounded size="small" @click="refresh" />
       </div>
 
       <!-- Loading -->
@@ -252,22 +239,13 @@
       </template>
 
       <template #footer>
-        <!-- طاولة غير مدفوعة → زر الدفع -->
         <div v-if="selectedTable?.order && selectedTable.paymentStatus === 'unpaid'" class="w-full">
-          <Button
-            label="إتمام الدفع"
-            icon="pi pi-wallet"
-            class="w-full"
-            :disabled="!activeSession"
-            @click="openInvoice"
-          />
+          <Button label="إتمام الدفع" icon="pi pi-wallet" class="w-full" :disabled="!activeSession" @click="openInvoice" />
           <p v-if="!activeSession" class="text-xs text-center text-orange-500 mt-2 m-0">
             <i class="pi pi-exclamation-triangle ml-1" />
             افتح جلسة كاشير أولاً لإتمام الدفع
           </p>
         </div>
-
-        <!-- طاولة مدفوعة → زر مغادرة الزبون -->
         <div v-else-if="selectedTable?.paymentStatus === 'paid'" class="w-full flex flex-column gap-2">
           <div class="p-3 bg-green-50 border-1 border-green-200 border-round-xl flex align-items-center gap-2">
             <i class="pi pi-check-circle text-green-600 text-xl" />
@@ -289,67 +267,25 @@
     </Drawer>
 
     <!-- Invoice Dialog -->
-    <InvoiceDialog
-      v-model="invoiceVisible"
-      :table="selectedTable"
-      @confirm="onPaymentConfirm"
-    />
+    <InvoiceDialog v-model="invoiceVisible" :table="selectedTable" @confirm="onPaymentConfirm" />
 
     <!-- CashBox Session Dialogs -->
-    <CashboxSessionDialog
-      v-model="openSessionDialogVisible"
-      mode="open"
-      :loading="sessionLoading"
-      @confirm="handleOpenSession"
-    />
-
-    <CashboxSessionDialog
-      v-model="closeSessionDialogVisible"
-      mode="close"
-      :loading="sessionLoading"
-      :session-info="activeSession"
-      @confirm="handleCloseSession"
-    />
+    <CashboxSessionDialog v-model="openSessionDialogVisible" mode="open" :loading="sessionLoading" @confirm="handleOpenSession" />
+    <CashboxSessionDialog v-model="closeSessionDialogVisible" mode="close" :loading="sessionLoading" :session-info="activeSession" @confirm="handleCloseSession" />
 
     <!-- Close Session Before Logout Dialog -->
-    <Dialog
-      v-model:visible="logoutSessionDialogVisible"
-      :modal="true"
-      :draggable="false"
-      :closable="false"
-      style="width: 100%; max-width: 360px;"
-      dir="rtl"
-    >
+    <Dialog v-model:visible="logoutSessionDialogVisible" :modal="true" :draggable="false" :closable="false" style="width: 100%; max-width: 360px;" dir="rtl">
       <template #container>
         <div class="logout-session-dialog">
           <div class="icon-wrap">
-            <div class="icon-ring">
-              <i class="pi pi-sign-out" />
-            </div>
+            <div class="icon-ring"><i class="pi pi-sign-out" /></div>
           </div>
           <p class="dialog-title">تسجيل الخروج</p>
           <p class="dialog-sub">لديك جلسة مفتوحة. هل تريد إغلاقها قبل الخروج؟</p>
           <div class="dialog-actions">
-            <Button
-              label="إغلاق الجلسة والخروج"
-              severity="danger"
-              class="w-full"
-              :loading="sessionLoading"
-              @click="closeSessionThenLogout"
-            />
-            <Button
-              label="خروج بدون إغلاق"
-              severity="secondary"
-              outlined
-              class="w-full"
-              @click="proceedLogout"
-            />
-            <Button
-              label="إلغاء"
-              text
-              class="w-full"
-              @click="logoutSessionDialogVisible = false"
-            />
+            <Button label="إغلاق الجلسة والخروج" severity="danger" class="w-full" :loading="sessionLoading" @click="closeSessionThenLogout" />
+            <Button label="خروج بدون إغلاق" severity="secondary" outlined class="w-full" @click="proceedLogout" />
+            <Button label="إلغاء" text class="w-full" @click="logoutSessionDialogVisible = false" />
           </div>
         </div>
       </template>
@@ -363,7 +299,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { tableApi, orderApi, cashBoxApi } from '../../../services/api.service'
 import { tablesAdminApi } from '../../dashboard/tables/api/tables-admin.api'
-import { PaymentMethod, InvoiceStatus, DiscountType } from '../../../types/api.types'
+import { PaymentMethod } from '../../../types/api.types'
 import type { CashierTable, PaymentMethod as CashierPaymentMethod } from '../types/cashier.types'
 import type { Floor } from '../../dashboard/tables/types/tables-admin.types'
 import TableGrid from '../components/TableGrid.vue'
@@ -383,6 +319,7 @@ const router          = useRouter()
 const toast           = useToast()
 const auth            = useAuthStore()
 const currentTime     = ref('')
+const isScrolled      = ref(false)
 const activeFilter    = ref<'unpaid' | 'paid' | 'empty' | null>(null)
 const selectedFloorId = ref<number | null>(null)
 const isRefreshing    = ref(false)
@@ -401,21 +338,27 @@ const sessionLoading             = ref(false)
 const openSessionDialogVisible   = ref(false)
 const closeSessionDialogVisible  = ref(false)
 const logoutSessionDialogVisible = ref(false)
-let pendingLogout = false
 
 let timer: ReturnType<typeof setInterval>
+
+function handleScroll() {
+  isScrolled.value = window.scrollY > 300
+}
 
 onMounted(async () => {
   updateTime()
   timer = setInterval(updateTime, 1000)
+  window.addEventListener('scroll', handleScroll)
   await Promise.all([loadTables(), fetchActiveSession()])
-
-  // إذا لا توجد جلسة مفتوحة، اعرض dialog الفتح تلقائياً
   if (!activeSession.value) {
     openSessionDialogVisible.value = true
   }
 })
-onUnmounted(() => clearInterval(timer))
+
+onUnmounted(() => {
+  clearInterval(timer)
+  window.removeEventListener('scroll', handleScroll)
+})
 
 function updateTime() {
   currentTime.value = new Date().toLocaleTimeString('ar-IQ', {
@@ -444,11 +387,7 @@ function openCloseSession() {
 async function handleOpenSession(amount: number) {
   sessionLoading.value = true
   try {
-    // cashBoxId = 1 افتراضياً (يمكن تعديله لاحقاً)
-    const res = await cashBoxApi.openSession({
-      cashBoxId: 1,
-      openingBalance: amount,
-    })
+    const res = await cashBoxApi.openSession({ cashBoxId: 1, openingBalance: amount })
     activeSession.value = res
     openSessionDialogVisible.value = false
     toast.add({ severity: 'success', summary: 'تم', detail: 'تم فتح جلسة الكاشير بنجاح', life: 3000 })
@@ -463,10 +402,7 @@ async function handleCloseSession(amount: number) {
   if (!activeSession.value) return
   sessionLoading.value = true
   try {
-    await cashBoxApi.closeSession({
-      cashBoxSessionId: activeSession.value.id,
-      cashAmount: amount,
-    })
+    await cashBoxApi.closeSession({ cashBoxSessionId: activeSession.value.id, cashAmount: amount })
     activeSession.value = null
     closeSessionDialogVisible.value = false
     toast.add({ severity: 'success', summary: 'تم', detail: 'تم إغلاق الجلسة بنجاح', life: 3000 })
@@ -481,23 +417,16 @@ async function handleCloseSession(amount: number) {
 function handleBeforeLogout() {
   if (activeSession.value) {
     logoutSessionDialogVisible.value = true
-    return false // منع الخروج المباشر
+    return false
   }
-  return true // السماح بالخروج
+  return true
 }
 
 async function closeSessionThenLogout() {
-  if (!activeSession.value) {
-    proceedLogout()
-    return
-  }
+  if (!activeSession.value) { proceedLogout(); return }
   sessionLoading.value = true
   try {
-    // إغلاق الجلسة بالمبلغ الصفري (سيتم تحديثه لاحقاً)
-    await cashBoxApi.closeSession({
-      cashBoxSessionId: activeSession.value.id,
-      cashAmount: 0,
-    })
+    await cashBoxApi.closeSession({ cashBoxSessionId: activeSession.value.id, cashAmount: 0 })
     activeSession.value = null
     logoutSessionDialogVisible.value = false
     proceedLogout()
@@ -513,6 +442,15 @@ function proceedLogout() {
   auth.logout()
 }
 
+// ── helpers ───────────────────────────────────────────
+function isOpenInvoice(inv: any): boolean {
+  return inv.invoiceStatus === 'Pending' || inv.invoiceStatus === 'Open' || inv.status === 0
+}
+
+function isPaidInvoice(inv: any): boolean {
+  return inv.invoiceStatus === 'Paid' || inv.status === 1
+}
+
 // ── جلب البيانات ──────────────────────────────────────
 async function loadTables() {
   loading.value = true
@@ -523,7 +461,6 @@ async function loadTables() {
     ])
 
     floors.value = Array.isArray(floorsRes) ? floorsRes : (floorsRes as any)?.items ?? []
-
     const tableItems: any[] = Array.isArray(tablesRes) ? tablesRes : (tablesRes as any)?.items ?? []
 
     tables.value = tableItems.map((t: any) => ({
@@ -541,17 +478,12 @@ async function loadTables() {
       const tableRef = tables.value.find(tb => tb.id === t.id)
       if (!tableRef) return
 
-      const openInvoice = invoices.find(inv =>
-        (inv.invoiceStatus ?? inv.status ?? 0) === InvoiceStatus.Open
-      )
-
+      const openInvoice = invoices.find(isOpenInvoice)
       if (openInvoice) {
-        tableRef.order = buildOrder(t.id, openInvoice)
+        tableRef.order         = buildOrder(t.id, openInvoice)
         tableRef.paymentStatus = 'unpaid'
       } else {
-        const paidInvoice = invoices.find(inv =>
-          (inv.invoiceStatus ?? inv.status ?? 0) === InvoiceStatus.Paid
-        )
+        const paidInvoice = invoices.find(isPaidInvoice)
         if (paidInvoice) tableRef.paymentStatus = 'paid'
       }
     })
@@ -619,15 +551,9 @@ function applyFilter(list: CashierTable[]): CashierTable[] {
   return list
 }
 
-const unpaidCount = computed(() =>
-  tables.value.filter(t => t.order && t.paymentStatus === 'unpaid').length
-)
-const paidCount = computed(() =>
-  tables.value.filter(t => t.paymentStatus === 'paid').length
-)
-const emptyCount = computed(() =>
-  tables.value.filter(t => !t.order).length
-)
+const unpaidCount = computed(() => tables.value.filter(t => t.order && t.paymentStatus === 'unpaid').length)
+const paidCount   = computed(() => tables.value.filter(t => t.paymentStatus === 'paid').length)
+const emptyCount  = computed(() => tables.value.filter(t => !t.order).length)
 
 const filterLabel = computed(() => {
   switch (activeFilter.value) {
@@ -652,9 +578,7 @@ async function onTableSelect(table: CashierTable) {
     try {
       const invoices = await tableApi.getInvoices(table.id)
       const raw = Array.isArray(invoices) ? invoices : (invoices as any)?.items ?? []
-      const openInvoice = raw.find((inv: any) =>
-        (inv.invoiceStatus ?? inv.status ?? 0) === InvoiceStatus.Open
-      )
+      const openInvoice = raw.find(isOpenInvoice)
       if (openInvoice) {
         const updated: CashierTable = {
           ...table,
@@ -674,12 +598,10 @@ function openInvoice() {
   invoiceVisible.value = true
 }
 
-// ── سجل الطلبات ───────────────────────────────────
 function goToHistory() {
   router.push({ name: 'cashier-order-history' })
 }
 
-// ── تفريغ الطاولة بعد مغادرة الزبون ─────────────
 function confirmClearTable() {
   if (!selectedTable.value) return
   clearTable()
@@ -689,25 +611,14 @@ function clearTable() {
   if (!selectedTable.value) return
   clearingTable.value = true
 
-  // تفريغ الطاولة محلياً فوراً (لا يوجد API منفصل لهذا)
   const idx = tables.value.findIndex(t => t.id === selectedTable.value!.id)
   if (idx !== -1) {
-    tables.value[idx] = {
-      ...tables.value[idx],
-      order:         null,
-      paymentStatus: 'unpaid',
-    }
+    tables.value[idx] = { ...tables.value[idx], order: null, paymentStatus: 'unpaid' }
   }
 
   clearingTable.value = false
   drawerVisible.value = false
-
-  toast.add({
-    severity: 'info',
-    summary:  'تم التفريغ',
-    detail:   `طاولة ${selectedTable.value.number} أصبحت فارغة`,
-    life:     3000,
-  })
+  toast.add({ severity: 'info', summary: 'تم التفريغ', detail: `طاولة ${selectedTable.value.number} أصبحت فارغة`, life: 3000 })
 }
 
 async function onPaymentConfirm(payload: {
@@ -725,9 +636,7 @@ async function onPaymentConfirm(payload: {
   }
 
   try {
-    // ✅ لا ترسل discountType/discountAmount إذا لم يكن هناك خصم
     const hasDiscount = payload.discountAmount !== null && payload.discountAmount > 0
-
     await orderApi.checkout({
       invoiceId:        selectedTable.value.order.id,
       paymentMethod:    methodMap[payload.method],
@@ -747,12 +656,7 @@ async function onPaymentConfirm(payload: {
     }
 
     drawerVisible.value = false
-    toast.add({
-      severity: 'success',
-      summary: 'تم الدفع',
-      detail: `تم استلام دفع طاولة ${selectedTable.value.number} بنجاح`,
-      life: 3000,
-    })
+    toast.add({ severity: 'success', summary: 'تم الدفع', detail: `تم استلام دفع طاولة ${selectedTable.value.number} بنجاح`, life: 3000 })
   } catch {
     toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل إتمام الدفع', life: 3000 })
   }
@@ -762,6 +666,24 @@ async function onPaymentConfirm(payload: {
 <style scoped>
 .fade-enter-active, .fade-leave-active { transition: opacity 0.15s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.slide-up-enter-active, .slide-up-leave-active {
+  transition: all 0.25s ease;
+  overflow: hidden;
+}
+.slide-up-enter-from, .slide-up-leave-to {
+  opacity: 0;
+  max-height: 0;
+  margin-bottom: 0 !important;
+}
+.slide-up-enter-to, .slide-up-leave-from {
+  opacity: 1;
+  max-height: 60px;
+}
+
+.stats-card {
+  transition: all 0.25s ease;
+}
 
 .floor-tab {
   display: inline-flex;
@@ -778,12 +700,8 @@ async function onPaymentConfirm(payload: {
   flex-shrink: 0;
   transition: all 0.15s ease;
 }
-.floor-tab:hover { background: var(--p-surface-100); color: var(--p-text-color); }
-.floor-tab.active {
-  background: var(--p-primary-color);
-  border-color: var(--p-primary-color);
-  color: #fff;
-}
+.floor-tab:hover  { background: var(--p-surface-100); color: var(--p-text-color); }
+.floor-tab.active { background: var(--p-primary-color); border-color: var(--p-primary-color); color: #fff; }
 
 @keyframes blink {
   0%, 100% { opacity: 1; }

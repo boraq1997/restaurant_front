@@ -12,6 +12,17 @@ import type {
 } from '../types/api.types'
 
 // ─── DTOs ─────────────────────────────────────────────────────────────────────
+export const customerApi = {
+  submitOrder: (qrToken: string, items: SubmitOrderItemDto[]): Promise<any> =>
+    apiClient.post(`/customers/SubmitOrder/${qrToken}`, { items }),
+}
+
+export interface SubmitOrderItemDto {
+  menuItemId: number
+  quantity:   number
+  optionIds?: number[]
+  notes?:     string
+}
 
 export interface CheckoutRequestDto {
   invoiceId:        number
@@ -140,4 +151,10 @@ export const cashBoxApi = {
   /** جلب الجلسة النشطة حالياً */
   getActiveSession: (): Promise<any> =>
     apiClient.get('/cashbox/active-session'),
+
+  removeItem: (invoiceItemId: number): Promise<void> =>
+    apiClient.post('/order/void-item', { invoiceItemId, voidReason: null }),
+
+  updateItem: (invoiceItemId: number, quantity: number): Promise<void> =>
+    apiClient.post('/order/add-item', { invoiceItemId, quantity }),
 }
