@@ -4,6 +4,7 @@
     :header="category ? 'تعديل الفئة' : 'فئة جديدة'"
     :modal="true" :draggable="false"
     :style="{ width: '380px' }" dir="rtl"
+    @hide="resetForm"
   >
     <div class="flex flex-column gap-4 pt-2">
 
@@ -36,7 +37,7 @@
       <!-- الطابعة -->
       <div class="flex flex-column gap-2">
         <label class="font-medium text-sm">
-          رقم الطابعة <span class="text-red-500">*</span>
+          الطابعة <span class="text-red-500">*</span>
         </label>
         <Select
           v-model="form.printerId"
@@ -45,6 +46,8 @@
           option-value="value"
           placeholder="اختر طابعة"
           fluid
+          :loading="loadingPrinters"
+          :disabled="loadingPrinters"
           :class="{ 'p-invalid': errors.printerId }"
         />
         <small v-if="errors.printerId" class="text-red-500">{{ errors.printerId }}</small>
@@ -80,6 +83,7 @@ import Select from 'primevue/select'
 import ToggleSwitch from 'primevue/toggleswitch'
 import Button from 'primevue/button'
 import { useVModel } from '@vueuse/core'
+import apiClient from '../../../../services/api-client'
 import type { MenuCategory } from '../../../../types/menu.types'
 
 const props = defineProps<{
@@ -95,15 +99,26 @@ const emit = defineEmits<{
 
 const visible = useVModel(props, 'modelValue', emit)
 
-// ── أرقام الطابعات (مؤقتة - يُستبدل بـ API لاحقاً) ──
-const printerOptions = [
-  { label: 'طابعة 1', value: 1 },
-  { label: 'طابعة 2', value: 2 },
-  { label: 'طابعة 3', value: 3 },
-  { label: 'طابعة 4', value: 4 },
-  { label: 'طابعة 5', value: 5 },
-]
+// ── Printers from API ──────────────────────────────────
+const printerOptions  = ref<{ label: string; value: number }[]>([])
+const loadingPrinters = ref(false)
 
+async function fetchPrinters() {
+  loadingPrinters.value = true
+  try {
+    const data = await apiClient.get('/printers')
+    printerOptions.value = data.map((p: any) => ({
+      label: p.location ? `${p.name} — ${p.location}` : p.name,
+      value: p.id,
+    }))
+  } catch {
+    printerOptions.value = []
+  } finally {
+    loadingPrinters.value = false
+  }
+}
+
+// ── Form ───────────────────────────────────────────────
 const emptyForm = () => ({
   name:      '',
   image:     '',
@@ -114,39 +129,38 @@ const emptyForm = () => ({
 const form   = ref(emptyForm())
 const errors = reactive({ name: '', printerId: '' })
 
-// ── تعبئة الفورم عند التعديل، وتصفيره عند الإضافة ──
+function resetForm() {
+  form.value   = emptyForm()
+  errors.name      = ''
+  errors.printerId = ''
+}
+
+// تعبئة الفورم عند الفتح، وجلب الطابعات
 watch(
   () => props.modelValue,
   (open) => {
     if (!open) return
-    errors.name      = ''
-    errors.printerId = ''
-    form.value = props.category
-      ? {
-          name:      props.category.name,
-          image:     props.category.image ?? '',
-          printerId: props.category.printerId ?? null,
-          isActive:  props.category.isActive,
-        }
-      : emptyForm()
+    fetchPrinters()
+    resetForm()
+    if (props.category) {
+      form.value = {
+        name:      props.category.name,
+        image:     props.category.image ?? '',
+        printerId: props.category.printerId ?? null,
+        isActive:  props.category.isActive,
+      }
+    }
   },
 )
 
+// ── Validation ─────────────────────────────────────────
 function validate() {
-  errors.name      = ''
-  errors.printerId = ''
-  let valid = true
-  if (!form.value.name.trim()) {
-    errors.name = 'اسم الفئة مطلوب'
-    valid = false
-  }
-  if (!form.value.printerId) {
-    errors.printerId = 'رقم الطابعة مطلوب'
-    valid = false
-  }
-  return valid
+  errors.name      = form.value.name.trim() ? '' : 'اسم الفئة مطلوب'
+  errors.printerId = form.value.printerId   ? '' : 'الطابعة مطلوبة'
+  return !errors.name && !errors.printerId
 }
 
+// ── Save ───────────────────────────────────────────────
 function handleSave() {
   if (!validate()) return
   emit('save', {

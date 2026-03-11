@@ -100,6 +100,11 @@ const routes: RouteRecordRaw[] = [
         name: 'admin-cashier',
         component: () => import('../../modules/cashier/pages/CashierHome.vue'),
       },
+      {
+        path: 'printers',
+        name: 'dashboard-printers',
+        component: () => import('../../modules/dashboard/printers/pages/PrintersPage.vue'),
+      }
     ],
   },
 

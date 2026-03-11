@@ -4,6 +4,7 @@
     :header="item ? 'تعديل المادة' : 'مادة جديدة'"
     :modal="true" :draggable="false"
     :style="{ width: '420px' }" dir="rtl"
+    @hide="resetForm"
   >
     <div class="flex flex-column gap-3 pt-2">
 
@@ -66,6 +67,8 @@
           option-value="value"
           placeholder="بدون طابعة خاصة"
           :show-clear="true"
+          :loading="loadingPrinters"
+          :disabled="loadingPrinters"
           fluid
         />
       </div>
@@ -101,6 +104,7 @@ import Textarea from 'primevue/textarea'
 import Select from 'primevue/select'
 import ToggleSwitch from 'primevue/toggleswitch'
 import Button from 'primevue/button'
+import apiClient from '../../../../services/api-client'
 import type { MenuItem } from '../../../../types/menu.types'
 
 const props = defineProps<{
@@ -119,15 +123,26 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 })
 
-// ── أرقام الطابعات (مؤقتة - يُستبدل بـ API لاحقاً) ──
-const printerOptions = [
-  { label: 'طابعة 1', value: 1 },
-  { label: 'طابعة 2', value: 2 },
-  { label: 'طابعة 3', value: 3 },
-  { label: 'طابعة 4', value: 4 },
-  { label: 'طابعة 5', value: 5 },
-]
+// ── Printers from API ──────────────────────────────────
+const printerOptions  = ref<{ label: string; value: number }[]>([])
+const loadingPrinters = ref(false)
 
+async function fetchPrinters() {
+  loadingPrinters.value = true
+  try {
+    const data = await apiClient.get('/printers')
+    printerOptions.value = data.map((p: any) => ({
+      label: p.location ? `${p.name} — ${p.location}` : p.name,
+      value: p.id,
+    }))
+  } catch {
+    printerOptions.value = []
+  } finally {
+    loadingPrinters.value = false
+  }
+}
+
+// ── Form ───────────────────────────────────────────────
 const emptyForm = () => ({
   name:              '',
   description:       '',
@@ -141,50 +156,45 @@ const emptyForm = () => ({
 const form   = ref(emptyForm())
 const errors = reactive({ name: '', price: '' })
 
+function resetForm() {
+  form.value   = emptyForm()
+  errors.name  = ''
+  errors.price = ''
+}
+
 watch(
   () => props.modelValue,
   (open) => {
     if (!open) return
-    errors.name  = ''
-    errors.price = ''
-    form.value = props.item
-      ? {
-          name:              props.item.name,
-          description:       props.item.description ?? '',
-          image:             (props.item as any).image ?? '',
-          price:             props.item.price,
-          cost:              props.item.cost ?? null,
-          // ✅ لا نرسل 0 - نتركها null إذا لم تكن محددة
-          specificPrinterId: props.item.specificPrinterId
-            ? props.item.specificPrinterId
-            : null,
-          isAvailable: props.item.isAvailable,
-        }
-      : emptyForm()
+    fetchPrinters()
+    resetForm()
+    if (props.item) {
+      form.value = {
+        name:              props.item.name,
+        description:       props.item.description ?? '',
+        image:             (props.item as any).image ?? '',
+        price:             props.item.price,
+        cost:              props.item.cost ?? null,
+        specificPrinterId: props.item.specificPrinterId ?? null,
+        isAvailable:       props.item.isAvailable,
+      }
+    }
   },
 )
 
+// ── Validation ─────────────────────────────────────────
 function validate() {
-  errors.name  = ''
-  errors.price = ''
-  let valid = true
-  if (!form.value.name.trim()) {
-    errors.name = 'اسم المادة مطلوب'
-    valid = false
-  }
-  if (!form.value.price || form.value.price <= 0) {
-    errors.price = 'السعر مطلوب'
-    valid = false
-  }
-  return valid
+  errors.name  = form.value.name.trim() ? '' : 'اسم المادة مطلوب'
+  errors.price = (form.value.price && form.value.price > 0) ? '' : 'السعر مطلوب'
+  return !errors.name && !errors.price
 }
 
+// ── Save ───────────────────────────────────────────────
 function handleSave() {
   if (!validate()) return
   emit('save', {
     ...form.value,
     name:              form.value.name.trim(),
-    // ✅ إرسال null وليس 0 عندما لا تكون الطابعة محددة
     specificPrinterId: form.value.specificPrinterId ?? null,
   })
 }

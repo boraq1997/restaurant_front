@@ -104,6 +104,7 @@ const navItems = [
   { label: 'إدارة الطاولات',    icon: 'pi pi-th-large',   to: '/dashboard/tables' },
   { label: 'إدارة المستخدمين',  icon: 'pi pi-users',      to: '/dashboard/users' },
   { label: 'سجل الطلبات',       icon: 'pi pi-history',    to: '/dashboard/orders' },
+  { label: 'الطابعات',          icon: 'pi pi-print',      to: '/dashboard/printers' },
   { label: 'صفحة الويتر',       icon: 'pi pi-clock',      to: '/waiter' },
   { label: 'صفحة الكاشير',      icon: 'pi pi-wallet',     to: '/cashier' },
 ]

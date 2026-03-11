@@ -180,6 +180,8 @@ const navItems = [
   { label: 'سجل الطلبات',      icon: 'pi pi-history',   to: '/dashboard/orders' },
   { label: 'صفحة الويتر',      icon: 'pi pi-clock',     to: '/dashboard/waiter' },
   { label: 'صفحة الكاشير',     icon: 'pi pi-wallet',    to: '/dashboard/cashier' },
+  { label: 'الطابعات',          icon: 'pi pi-print',      to: '/dashboard/printers' },
+
 ]
 
 const currentPage = computed(() =>

@@ -342,7 +342,9 @@ const updatingAction     = ref<string | null>(null)
 
 // ── computed ───────────────────────────────────────────
 const tableId     = computed(() => route.params.id ? Number(route.params.id) : tableData.value?.id ?? null)
-const tableNumber = computed(() => tableData.value?.number ?? tableId.value ?? route.params.token)
+const tableNumber = computed(() =>
+  tableData.value?.tableNumber ?? tableData.value?.number ?? tableId.value ?? route.params.token
+)
 const isWaiterRoute = computed(() => !!route.params.id)
 const existingTotal = computed(() =>
   existingItems.value.reduce((s, i) => s + (i.total ?? i.price * i.quantity), 0)
@@ -437,10 +439,9 @@ onMounted(async () => {
         tableInvoices.value = []
       }
     } else {
-      ;[tableRes, menuRes] = await Promise.all([
-        tableApi.getByToken(route.params.token as string),
-        menuApi.getAll(),
-      ])
+      const res = await tableApi.getByToken(route.params.token as string)
+      tableData.value     = res
+      allCategories.value = res.menu ?? []
     }
 
     tableData.value     = tableRes
