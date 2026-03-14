@@ -1,10 +1,19 @@
 // src/types/api.types.ts
 
-export enum InvoiceStatus { Open = 0, Paid = 1, Voided = 2, Transferred = 3 }
-export enum OrderTypes { DineIn = 0, Takeaway = 1, Delivery = 2 }
-export enum PaymentMethod { Cash = 0, Card = 1, Online = 2, Complimentary = 3 }
-export enum DiscountType { Percentage = 0, Fixed = 1 }
-export enum TableStatus { Available = 0, Occupied = 1, Reserved = 2, Merged = 3 }
+export const InvoiceStatus = { Open: 0, Paid: 1, Voided: 2, Transferred: 3 } as const
+export type InvoiceStatus = typeof InvoiceStatus[keyof typeof InvoiceStatus]
+
+export const OrderTypes    = { DineIn: 0, Takeaway: 1, Delivery: 2 } as const
+export type OrderTypes     = typeof OrderTypes[keyof typeof OrderTypes]
+
+export const PaymentMethod = { Cash: 0, Card: 1, Online: 2, Complimentary: 3 } as const
+export type PaymentMethod  = typeof PaymentMethod[keyof typeof PaymentMethod]
+
+export const DiscountType  = { Percentage: 0, Fixed: 1 } as const
+export type DiscountType   = typeof DiscountType[keyof typeof DiscountType]
+
+export const TableStatus   = { Available: 0, Occupied: 1, Reserved: 2, Merged: 3 } as const
+export type TableStatus    = typeof TableStatus[keyof typeof TableStatus]
 
 export interface MenuOptionApi {
   id: number

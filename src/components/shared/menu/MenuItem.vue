@@ -14,7 +14,7 @@
           @error="onImageError"
         />
         <div
-          v-if="!item.available"
+          v-if="!item.isAvailable"
           class="absolute top-0 left-0 w-full h-full flex align-items-center justify-content-center"
           style="background: rgba(0,0,0,0.5);"
         >
@@ -32,7 +32,7 @@
             icon="pi pi-plus"
             rounded
             size="small"
-            :disabled="!item.available"
+            :disabled="!item.isAvailable"
             @click.stop="$emit('open', item)"
           />
         </div>

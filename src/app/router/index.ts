@@ -73,8 +73,6 @@ const routes: RouteRecordRaw[] = [
         name: 'menu-items',
         component: () => import('../../modules/dashboard/menu/pages/CategoryItemsPage.vue'),
       },
-      // ← احذف هذا تماماً (كان يسبب المشكلة)
-      // { path: '/table/:id', name: 'table-order', ... }
       {
         path: 'users',
         name: 'dashboard-users',
@@ -104,6 +102,11 @@ const routes: RouteRecordRaw[] = [
         path: 'printers',
         name: 'dashboard-printers',
         component: () => import('../../modules/dashboard/printers/pages/PrintersPage.vue'),
+      },
+      {
+        path: 'orders',
+        name: 'dashboard-orders',
+        component: () => import('../../modules/dashboard/orders/OrderHistoryPage.vue'),
       }
     ],
   },

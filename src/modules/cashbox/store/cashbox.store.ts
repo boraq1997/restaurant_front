@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { cashboxApi } from '../api/cashbox.api'
-import { TransactionType } from '../../../types/api.types'
 import type { OpenSessionDto, CloseSessionDto } from '../../../types/cashbox.types'
 
 export const useCashboxStore = defineStore('cashbox', () => {

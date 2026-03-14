@@ -1,67 +1,87 @@
+<!-- src/modules/waiter/pages/WaiterHome.vue -->
 <template>
   <div class="min-h-screen surface-50" dir="rtl">
 
     <!-- Header -->
     <header class="surface-card shadow-1 sticky top-0 z-5 border-bottom-1 border-200" style="transition: all 0.25s ease;">
-  <div class="px-3 py-3">
+      <div class="px-3 py-3">
 
-    <!-- يختفي عند السكرول -->
-    <Transition name="slide-up">
-      <div v-if="!isScrolled" class="flex align-items-center justify-content-between mb-3">
-        <div class="flex align-items-center gap-2">
-          <div class="w-2rem h-2rem border-round-lg bg-primary flex align-items-center justify-content-center">
-            <i class="pi pi-shop text-white text-sm"></i>
+        <Transition name="slide-up">
+          <div v-if="!isScrolled" class="flex align-items-center justify-content-between mb-3">
+            <div class="flex align-items-center gap-2">
+              <div class="w-2rem h-2rem border-round-lg bg-primary flex align-items-center justify-content-center">
+                <i class="pi pi-shop text-white text-sm"></i>
+              </div>
+              <div>
+                <p class="font-bold text-base m-0 text-900 line-height-1">مطعمنا</p>
+                <span class="text-xs text-500">الويتر</span>
+              </div>
+            </div>
+
+            <div class="flex align-items-center gap-2">
+              <!-- زر دمج الطاولات -->
+              <Button
+                icon="pi pi-arrows-h"
+                severity="secondary"
+                text
+                rounded
+                v-tooltip.bottom="'دمج طاولات'"
+                @click="openMergeDialog"
+              />
+              <!-- زر فصل الطاولات — يظهر فقط إذا وجد طاولات مدمجة -->
+              <Button
+                v-if="mergedTables.length > 0"
+                icon="pi pi-arrows-v"
+                severity="warning"
+                text
+                rounded
+                v-tooltip.bottom="'فصل طاولات'"
+                @click="openUnmergeDialog"
+              />
+
+              <Button
+                v-if="alertsCount > 0"
+                icon="pi pi-bell"
+                :badge="String(alertsCount)"
+                badge-severity="danger"
+                severity="danger"
+                text rounded
+                @click="showAlerts = true"
+              />
+              <div class="flex align-items-center gap-1 surface-100 px-2 py-1 border-round-lg">
+                <i class="pi pi-clock text-primary text-xs"></i>
+                <span class="text-xs font-bold text-primary">{{ currentTime }}</span>
+                <LogoutButton />
+              </div>
+            </div>
           </div>
-          <div>
-            <p class="font-bold text-base m-0 text-900 line-height-1">مطعمنا</p>
-            <span class="text-xs text-500">الويتر</span>
-          </div>
+        </Transition>
+
+        <TableStatsBar
+          :available="availableCount"
+          :occupied="occupiedCount"
+          :reserved="reservedCount"
+          :active-filter="activeFilter"
+          :compact="isScrolled"
+          @filter="onFilter"
+        />
+
+        <!-- Floors Tab Bar -->
+        <div v-if="hasFloors" class="flex gap-2 overflow-x-auto pt-3 pb-1" style="scrollbar-width: none;">
+          <button class="floor-tab" :class="{ active: selectedFloorId === null }" @click="selectedFloorId = null">
+            الكل
+          </button>
+          <button
+            v-for="floor in floors" :key="floor.id"
+            class="floor-tab" :class="{ active: selectedFloorId === floor.id }"
+            @click="selectedFloorId = floor.id"
+          >
+            {{ floor.name }}
+          </button>
         </div>
 
-        <div class="flex align-items-center gap-2">
-          <Button
-            v-if="alertsCount > 0"
-            icon="pi pi-bell"
-            :badge="String(alertsCount)"
-            badge-severity="danger"
-            severity="danger"
-            text rounded
-            @click="showAlerts = true"
-          />
-          <div class="flex align-items-center gap-1 surface-100 px-2 py-1 border-round-lg">
-            <i class="pi pi-clock text-primary text-xs"></i>
-            <span class="text-xs font-bold text-primary">{{ currentTime }}</span>
-            <LogoutButton />
-          </div>
-        </div>
       </div>
-    </Transition>
-
-    <TableStatsBar
-      :available="availableCount"
-      :occupied="occupiedCount"
-      :reserved="reservedCount"
-      :active-filter="activeFilter"
-      :compact="isScrolled"
-      @filter="onFilter"
-    />
-
-    <!-- Floors Tab Bar -->
-    <div v-if="hasFloors" class="flex gap-2 overflow-x-auto pt-3 pb-1" style="scrollbar-width: none;">
-      <button class="floor-tab" :class="{ active: selectedFloorId === null }" @click="selectedFloorId = null">
-        الكل
-      </button>
-      <button
-        v-for="floor in floors" :key="floor.id"
-        class="floor-tab" :class="{ active: selectedFloorId === floor.id }"
-        @click="selectedFloorId = floor.id"
-      >
-        {{ floor.name }}
-      </button>
-    </div>
-
-  </div>
-</header>
+    </header>
 
     <!-- Main -->
     <main class="px-3 pt-3 pb-6">
@@ -79,6 +99,19 @@
             <div class="flex align-items-center gap-1 text-xs">
               <span>{{ filterLabel }}</span>
               <i class="pi pi-times" style="font-size: 0.6rem"></i>
+            </div>
+          </Tag>
+          <!-- badge الطاولات المدمجة -->
+          <Tag
+            v-if="mergedTables.length > 0"
+            severity="warn"
+            rounded
+            class="cursor-pointer"
+            @click="openUnmergeDialog"
+          >
+            <div class="flex align-items-center gap-1 text-xs">
+              <i class="pi pi-arrows-h" style="font-size:0.65rem" />
+              <span>{{ mergedTables.length }} مدمجة</span>
             </div>
           </Tag>
         </div>
@@ -99,12 +132,9 @@
       </div>
 
       <template v-else>
-
-        <!-- ── عرض بطوابق ── -->
         <template v-if="hasFloors">
           <template v-for="floor in visibleFloors" :key="floor.id">
             <div v-if="tablesForFloor(floor.id).length > 0" class="mb-5">
-              <!-- عنوان الطابق -->
               <div class="flex align-items-center gap-2 mb-3">
                 <div class="w-2rem h-2rem border-round bg-primary flex align-items-center justify-content-center flex-shrink-0">
                   <i class="pi pi-building text-white text-xs" />
@@ -115,8 +145,6 @@
               <TableGrid :tables="tablesForFloor(floor.id)" @select="onTableSelect" />
             </div>
           </template>
-
-          <!-- لا توجد طاولات بعد الفلتر -->
           <div
             v-if="visibleFloors.every(f => tablesForFloor(f.id).length === 0)"
             class="flex flex-column align-items-center justify-content-center py-8 gap-3"
@@ -127,7 +155,6 @@
           </div>
         </template>
 
-        <!-- ── عرض بدون طوابق (عادي) ── -->
         <template v-else>
           <Transition name="fade" mode="out-in">
             <div
@@ -141,7 +168,6 @@
             <TableGrid v-else :tables="filteredTables" @select="onTableSelect" />
           </Transition>
         </template>
-
       </template>
     </main>
 
@@ -159,7 +185,7 @@
         <div
           v-for="table in tablesWithAlerts"
           :key="table.id"
-          class="surface-50 border-round-lg p-3 border-1 surface-border cursor-pointer hover:surface-100 transition-all transition-duration-200"
+          class="surface-50 border-round-lg p-3 border-1 surface-border cursor-pointer hover:surface-100 transition-all"
           @click="onTableSelect(table); showAlerts = false"
         >
           <div class="flex align-items-center justify-content-between mb-2">
@@ -181,6 +207,23 @@
       </div>
     </Dialog>
 
+    <!-- ── Merge Dialog ── -->
+    <MergeTablesDialog
+      v-model="mergeDialogVisible"
+      :tables="tables"
+      :floors="floors"
+      :loading="mergeLoading"
+      @confirm="handleMerge"
+    />
+
+    <!-- ── Unmerge Dialog ── -->
+    <UnmergeTablesDialog
+      v-model="unmergeDialogVisible"
+      :merged-tables="mergedTables"
+      :loading="mergeLoading"
+      @confirm="handleUnmerge"
+    />
+
   </div>
 </template>
 
@@ -192,32 +235,43 @@ import { tableApi } from '../../../services/api.service'
 import { tablesAdminApi } from '../../dashboard/tables/api/tables-admin.api'
 import type { Table, TableAlert } from '../types/waiter.types'
 import type { Floor } from '../../dashboard/tables/types/tables-admin.types'
-import TableGrid from '../components/TableGrid.vue'
-import TableStatsBar from '../components/TableStatsBar.vue'
-import LogoutButton from '../../../components/shared/Logoutbutton.vue'
-import Tag from 'primevue/tag'
-import Button from 'primevue/button'
-import Dialog from 'primevue/dialog'
+import TableGrid         from '../components/TableGrid.vue'
+import TableStatsBar     from '../components/TableStatsBar.vue'
+import MergeTablesDialog from '../components/MergeTablesDialog.vue'
+import UnmergeTablesDialog from '../components/UnmergeTablesDialog.vue'
+import LogoutButton      from '../../../components/shared/Logoutbutton.vue'
+import Tag            from 'primevue/tag'
+import Button         from 'primevue/button'
+import Dialog         from 'primevue/dialog'
 import ProgressSpinner from 'primevue/progressspinner'
 import { useAuthStore } from '../../auth/store/auth.store'
+import apiClient from '../../../services/api-client'
 
 const auth   = useAuthStore()
 const router = useRouter()
 const toast  = useToast()
 
-const currentTime    = ref('')
-const activeFilter   = ref<Table['status'] | null>(null)
-const isRefreshing   = ref(false)
-const showAlerts     = ref(false)
-const loading        = ref(true)
-const tables         = ref<Table[]>([])
-const floors         = ref<Floor[]>([])
+const currentTime     = ref('')
+const activeFilter    = ref<Table['status'] | null>(null)
+const isRefreshing    = ref(false)
+const showAlerts      = ref(false)
+const loading         = ref(true)
+const tables          = ref<Table[]>([])
+const floors          = ref<Floor[]>([])
 const selectedFloorId = ref<number | null>(null)
-const isScrolled = ref(false)
+const isScrolled      = ref(false)
 
-function handleScroll() {
-  isScrolled.value = window.scrollY > 80
-}
+// ── Merge State ───────────────────────────────────────
+const mergeDialogVisible   = ref(false)
+const unmergeDialogVisible = ref(false)
+const mergeLoading         = ref(false)
+
+// الطاولات المدمجة (status === 'merged')
+const mergedTables = computed(() =>
+  tables.value.filter(t => t.status === "merged" && t.primaryTableId === null)
+)
+
+function handleScroll() { isScrolled.value = window.scrollY > 80 }
 
 let timer: ReturnType<typeof setInterval>
 
@@ -245,14 +299,18 @@ async function loadTables() {
 
     const items = (tablesRes as any).items ?? tablesRes
     tables.value = items.map((t: any) => ({
-      id:       t.id,
-      name:     `طاولة ${t.number}`,
-      number:   t.number,
-      capacity: t.capacity,
-      floorId:  t.floorId ?? null,
-      status:   mapStatus(t.status),
-      reservation: null,
-      alerts:   [],
+      id:             t.id,
+      name:           t.name?.trim() ? t.name : `طاولة ${t.number}`,
+      number:         t.number,
+      capacity:       t.capacity,
+      floorId:        t.floorId ?? null,
+      primaryTableId:     t.primaryTableId     ?? null,
+      primaryTableName:   t.primaryTableName   ?? null,
+      primaryTableNumber: t.primaryTableNumber ?? null,
+      mergedTables:       t.mergedTables       ?? [],   // الطاولات المدمجة مع هذه الطاولة
+      status:         mapStatus(t.status),
+      reservation:    null,
+      alerts:         [],
     }))
   } catch {
     toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل تحميل الطاولات', life: 3000 })
@@ -266,7 +324,7 @@ function mapStatus(status: string | number): Table['status'] {
   switch (s) {
     case 'occupied': case 1: return 'occupied'
     case 'reserved': case 2: return 'reserved'
-    case 'merged':            return 'occupied' // merged تعتبر مشغولة
+    case 'merged':   case 3: return 'merged'
     default:                  return 'available'
   }
 }
@@ -284,6 +342,45 @@ function updateTime() {
   })
 }
 
+// ── Merge / Unmerge ───────────────────────────────────
+function openMergeDialog() {
+  mergeDialogVisible.value = true
+}
+
+function openUnmergeDialog() {
+  unmergeDialogVisible.value = true
+}
+
+async function handleMerge(payload: { sourceTableIds: number[]; targetTableId: number }) {
+  mergeLoading.value = true
+  try {
+    await apiClient.post('/tables/merge', payload)
+    mergeDialogVisible.value = false
+    toast.add({ severity: 'success', summary: 'تم', detail: 'تم دمج الطاولات بنجاح', life: 3000 })
+    await loadTables()
+  } catch (e: any) {
+    const msg = e?.response?.data?.message ?? 'فشل دمج الطاولات'
+    toast.add({ severity: 'error', summary: 'خطأ', detail: msg, life: 3000 })
+  } finally {
+    mergeLoading.value = false
+  }
+}
+
+async function handleUnmerge(payload: { tablesToUnmerge: number[] }) {
+  mergeLoading.value = true
+  try {
+    await apiClient.post('/tables/unmerge', payload)
+    unmergeDialogVisible.value = false
+    toast.add({ severity: 'success', summary: 'تم', detail: 'تم فصل الطاولات بنجاح', life: 3000 })
+    await loadTables()
+  } catch (e: any) {
+    const msg = e?.response?.data?.message ?? 'فشل فصل الطاولات'
+    toast.add({ severity: 'error', summary: 'خطأ', detail: msg, life: 3000 })
+  } finally {
+    mergeLoading.value = false
+  }
+}
+
 // ── Floors ────────────────────────────────────────────
 const hasFloors = computed(() => floors.value.length > 0)
 
@@ -297,22 +394,18 @@ function tablesForFloor(floorId: number): Table[] {
   return applyFilter(tables.value.filter(t => (t as any).floorId === floorId))
 }
 
-// ── Filters ───────────────────────────────────────────
 function applyFilter(list: Table[]): Table[] {
   return activeFilter.value
     ? list.filter(t => t.status === activeFilter.value)
     : list
 }
 
-const filteredTables = computed(() => applyFilter(tables.value))
-
-// ── Stats ─────────────────────────────────────────────
-const availableCount = computed(() => tables.value.filter(t => t.status === 'available').length)
-const occupiedCount  = computed(() => tables.value.filter(t => t.status === 'occupied').length)
-const reservedCount  = computed(() => tables.value.filter(t => t.status === 'reserved').length)
-
-const tablesWithAlerts = computed(() => tables.value.filter(t => t.alerts && t.alerts.length > 0))
-const alertsCount      = computed(() => tables.value.reduce((sum, t) => sum + (t.alerts?.length ?? 0), 0))
+const filteredTables  = computed(() => applyFilter(tables.value))
+const availableCount  = computed(() => tables.value.filter(t => t.status === 'available').length)
+const occupiedCount   = computed(() => tables.value.filter(t => t.status === 'occupied').length)
+const reservedCount   = computed(() => tables.value.filter(t => t.status === 'reserved').length)
+const tablesWithAlerts = computed(() => tables.value.filter(t => t.alerts?.length > 0))
+const alertsCount     = computed(() => tables.value.reduce((s, t) => s + (t.alerts?.length ?? 0), 0))
 
 const filterLabel = computed(() => {
   switch (activeFilter.value) {
@@ -323,7 +416,6 @@ const filterLabel = computed(() => {
   }
 })
 
-// ── Actions ───────────────────────────────────────────
 function onFilter(status: Table['status']) {
   activeFilter.value = activeFilter.value === status ? null : status
 }
@@ -377,11 +469,7 @@ function alertTextClass(alert: TableAlert) {
   transition: all 0.15s ease;
 }
 .floor-tab:hover  { background: var(--p-surface-100); color: var(--p-text-color); }
-.floor-tab.active {
-  background: var(--p-primary-color);
-  border-color: var(--p-primary-color);
-  color: #fff;
-}
+.floor-tab.active { background: var(--p-primary-color); border-color: var(--p-primary-color); color: #fff; }
 
 .slide-up-enter-active, .slide-up-leave-active {
   transition: all 0.25s ease;

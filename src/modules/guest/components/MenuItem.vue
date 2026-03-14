@@ -18,7 +18,6 @@
           class="absolute top-0 left-0 w-full h-full flex align-items-center justify-content-center"
           style="background: rgba(0,0,0,0.5);"
         >
-          <Tag value="غير متاح" severity="secondary" class="text-xs" />
         </div>
       </div>
       <div class="flex-1 flex flex-column justify-content-between p-3">
@@ -43,7 +42,6 @@
 
 <script setup lang="ts">
 import Button from 'primevue/button'
-import Tag from 'primevue/tag'
 import type { MenuItemApi } from '../../../types/api.types'
 
 defineProps<{

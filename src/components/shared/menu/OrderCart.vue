@@ -61,7 +61,7 @@
               @error="(e) => ((e.target as HTMLImageElement).src = '/defaultImages/defaultFood.jpeg')"
             />
             <div
-              v-if="!cartItem.menuItem.available"
+              v-if="!cartItem.menuItem.isAvailable"
               class="absolute top-0 left-0 w-full h-full flex align-items-center justify-content-center border-round"
               style="background: rgba(0,0,0,0.5);"
             >

@@ -37,7 +37,7 @@
           />
           <div class="flex-1">
             <p class="m-0 font-bold text-sm text-900">{{ cartItem.menuItem.name }}</p>
-            <span v-if="cartItem.selectedSize" class="text-xs text-500">
+            <span v-if="cartItem.selectedOptions" class="text-xs text-500">
               {{ cartItem.selectedSize.name }}
             </span>
           </div>
