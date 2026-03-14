@@ -132,7 +132,7 @@
           </span>
         </div>
 
-        <div v-if="order.discountPrice > 0" class="flex justify-content-between align-items-center">
+        <div v-if="(order.discountPrice ?? 0) > 0" class="flex justify-content-between align-items-center">
           <span class="text-sm text-500">الخصم</span>
           <span class="text-sm font-bold text-orange-500">
             - {{ order.discountPrice?.toLocaleString() }} د.ع

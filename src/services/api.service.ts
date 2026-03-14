@@ -120,7 +120,7 @@ export const orderApi = {
   getHistory: (params?: {
     StartDate?:   string
     EndDate?:     string
-    Status?:      number
+    Status?:      string
     TableId?:     number
     CustomerId?:  number
     PageNumber?:  number

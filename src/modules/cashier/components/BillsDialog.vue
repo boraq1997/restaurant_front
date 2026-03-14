@@ -233,10 +233,10 @@ function removeBill(value: number) {
   }
 }
 
-function onBillImageError(e: Event, value: number) {
-  const img = e.target as HTMLImageElement
-  img.src = `https://placehold.co/200x100?text=${value.toLocaleString()}`
-}
+// function onBillImageError(e: Event, value: number) {
+//   const img = e.target as HTMLImageElement
+//   img.src = `https://placehold.co/200x100?text=${value.toLocaleString()}`
+// }
 
 function confirm() {
   emit('confirm', billsTotal.value)

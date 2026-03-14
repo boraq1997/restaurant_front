@@ -509,7 +509,7 @@ function buildOrder(tableId: number, inv: any) {
     },
     quantity:        item.quantity,
     selectedOptions: item.selectedOptionsDto ?? [],
-    note:            item.notes ?? '',
+    notes:            item.notes ?? '',
   }))
 
   return {
@@ -613,7 +613,9 @@ function clearTable() {
 
   const idx = tables.value.findIndex(t => t.id === selectedTable.value!.id)
   if (idx !== -1) {
-    tables.value[idx] = { ...tables.value[idx], order: null, paymentStatus: 'unpaid' }
+    if (tables.value[idx]) {
+      tables.value[idx] = { ...tables.value[idx]!, order: null, paymentStatus: 'unpaid' }
+    }
   }
 
   clearingTable.value = false
@@ -649,10 +651,11 @@ async function onPaymentConfirm(payload: {
     })
 
     const idx = tables.value.findIndex(t => t.id === selectedTable.value!.id)
-    if (idx !== -1) {
-      tables.value[idx].paymentStatus        = 'paid'
-      tables.value[idx].order!.paymentStatus = 'paid'
-      tables.value[idx].order!.paymentMethod = payload.method
+    const t = tables.value[idx]
+    if (t) {
+      t.paymentStatus        = 'paid'
+      t.order!.paymentStatus = 'paid'
+      t.order!.paymentMethod = payload.method
     }
 
     drawerVisible.value = false

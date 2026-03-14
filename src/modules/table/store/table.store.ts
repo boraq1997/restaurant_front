@@ -19,8 +19,8 @@ export const useTableStore = defineStore('table', () => {
   const reservedTables = computed(() =>
     tables.value.filter(t => t.status === TableStatus.Reserved)
   )
-  const waitingTables = computed(() =>
-    tables.value.filter(t => t.status === TableStatus.Waiting)
+  const mergedTables = computed(() =>
+    tables.value.filter(t => t.status === TableStatus.Merged)
   )
 
   const tableById = (id: number) =>
@@ -58,7 +58,7 @@ export const useTableStore = defineStore('table', () => {
 
   return {
     tables, loading, error,
-    availableTables, occupiedTables, reservedTables, waitingTables,
+    availableTables, occupiedTables, reservedTables, mergedTables,
     tableById,
     fetchTables, fetchTableInvoices, mergeTables,
   }

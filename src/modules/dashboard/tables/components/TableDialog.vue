@@ -113,7 +113,7 @@ import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
-import type { AdminTable, CreateTableDto } from '../types/tables-admin.types'
+import type { AdminTable, Floor, CreateTableDto } from '../types/tables-admin.types'
 
 const props = defineProps<{
   modelValue: boolean

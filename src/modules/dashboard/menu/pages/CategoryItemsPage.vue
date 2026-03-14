@@ -94,7 +94,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useMenuStore } from '../../../menu/store/menu.store'
-import type { MenuCategory, MenuItem } from '../../../../types/menu.types'
+import type { MenuItem } from '../../../../types/menu.types'
 import Button from 'primevue/button'
 import ProgressSpinner from 'primevue/progressspinner'
 import ItemGrid from '../components/ItemGrid.vue'
@@ -220,7 +220,7 @@ async function handleAssign(optionIds: number[]) {
 async function handleCreateAndAssign(opt: { name: string; price: number }) {
   if (!selectedItem.value) return
   try {
-    const res = await menu.createOption(opt)
+    const res = await menu.createOption({ ...opt, description: '', imageUrl: '', isAvailable: true })
     if (res?.id) {
       await menu.assignOption(selectedItem.value.id, res.id)
       await menu.fetchCategoryById(categoryId.value)

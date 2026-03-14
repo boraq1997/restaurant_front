@@ -3,7 +3,6 @@
   <div class="min-h-screen surface-ground" dir="rtl">
 
     <!-- Header -->
-    <!-- Header -->
 <div class="surface-card shadow-1 px-3 py-3 sticky top-0 z-5">
   <div class="flex align-items-center justify-content-between">
     <div class="flex align-items-center gap-2">
@@ -53,7 +52,7 @@
           <MenuItemCard
             v-for="item in filteredItems"
             :key="item.id"
-            :item="item"
+            :item="normalizeItem(item)"
             @open="openItem"
           />
         </div>
@@ -89,7 +88,7 @@
           <div class="overflow-y-auto flex-1 px-3 py-3">
             <div class="grid">
               <div v-for="item in filteredItems" :key="item.id" class="col-12 lg:col-6 xl:col-4">
-                <MenuItemCard :item="item" @open="openItem" />
+                <MenuItemCard :item="normalizeItem(item)" @open="openItem" />
               </div>
             </div>
           </div>
@@ -293,23 +292,24 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
-import { menuApi, orderApi, tableApi } from '../../../services/api.service'
+import { menuApi, orderApi, tableApi, customerApi } from '../../../services/api.service'
 import type { MenuCategoryApi, MenuItemApi, InvoiceApi } from '../../../types/api.types'
+import type { MenuItem }      from '../../../types/menu.types'
 import type { CartItemLocal } from '../../../components/shared/menu/MenuItemDialog.vue'
-import { useAuthStore } from '../../auth/store/auth.store'
-import { useRouter } from 'vue-router'
+import { useAuthStore }       from '../../auth/store/auth.store'
+import { useRouter }          from 'vue-router'
 
-import MenuCategory from '../../../components/shared/menu/MenuCategory.vue'
-import MenuItemCard from '../../../components/shared/menu/MenuItem.vue'
-import OrderCart from '../components/OrderCart.vue'
+import MenuCategory   from '../../../components/shared/menu/MenuCategory.vue'
+import MenuItemCard   from '../../../components/shared/menu/MenuItem.vue'
+import OrderCart      from '../components/OrderCart.vue'
 import MenuItemDialog from '../../../components/shared/menu/MenuItemDialog.vue'
 
-import Card from 'primevue/card'
-import Tag from 'primevue/tag'
-import Badge from 'primevue/badge'
-import Button from 'primevue/button'
-import Divider from 'primevue/divider'
-import Dialog from 'primevue/dialog'
+import Card            from 'primevue/card'
+import Tag             from 'primevue/tag'
+import Badge           from 'primevue/badge'
+import Button          from 'primevue/button'
+import Divider         from 'primevue/divider'
+import Dialog          from 'primevue/dialog'
 import ProgressSpinner from 'primevue/progressspinner'
 
 // ── ثوابت ──────────────────────────────────────────────
@@ -340,6 +340,15 @@ const showPrevOrders     = ref(false)
 const updatingId         = ref<number | null>(null)
 const updatingAction     = ref<string | null>(null)
 
+// ── helpers ────────────────────────────────────────────
+/** تحويل MenuItemApi → MenuItem (يضمن أن image دائماً string) */
+function normalizeItem(item: MenuItemApi): MenuItem {
+  return {
+    ...item,
+    image: item.image ?? '',
+  } as unknown as MenuItem
+}
+
 // ── computed ───────────────────────────────────────────
 const isWaiterRoute = computed(() => !!route.params.id)
 
@@ -358,7 +367,7 @@ const existingTotal = computed(() =>
 const activeCategories = computed<MenuCategoryApi[]>(() =>
   allCategories.value.filter(c => {
     const isActive = c.isActive === undefined ? true : c.isActive
-    return isActive && c.menuItems?.length > 0
+    return isActive && (c.menuItems?.length ?? 0) > 0
   })
 )
 
@@ -382,27 +391,15 @@ function itemTotal(item: CartItemLocal) {
   return (item.menuItem.price + optionsTotal) * item.quantity
 }
 
-function invoiceStatusLabel(status: string | number) {
-  if (status === 'Pending'   || status === 0) return 'مفتوح'
-  if (status === 'Paid'      || status === 1) return 'مدفوع'
-  if (status === 'Cancelled' || status === 2) return 'ملغي'
-  if (status === 'Refunded'  || status === 3) return 'محوّل'
-  return 'غير معروف'
-}
-
-function invoiceStatusSeverity(status: string | number): 'warn' | 'success' | 'danger' | 'secondary' {
-  if (status === 'Pending'   || status === 0) return 'warn'
-  if (status === 'Paid'      || status === 1) return 'success'
-  if (status === 'Cancelled' || status === 2) return 'danger'
-  return 'secondary'
+function isPendingInvoice(inv: any): boolean {
+  return inv.invoiceStatus === 0 || inv.status === 0
 }
 
 // ── refreshInvoices ────────────────────────────────────
 async function refreshInvoices() {
   if (isWaiterRoute.value) {
-    // ── ويتر/أدمن: يجلب عبر tableId ──
     if (!tableId.value) return
-    const invoices   = await tableApi.getInvoices(tableId.value)
+    const invoices    = await tableApi.getInvoices(tableId.value)
     const rawInvoices = Array.isArray(invoices) ? invoices : []
 
     tableInvoices.value = rawInvoices.map((inv: any) => ({
@@ -412,13 +409,11 @@ async function refreshInvoices() {
       items:      inv.invoiceItemsDto ?? inv.items ?? [],
     }))
 
-    const openInvoice = tableInvoices.value.find(inv =>
-      inv.status === 'Pending' || inv.status === 0
-    )
+    const openInvoice = tableInvoices.value.find(inv => isPendingInvoice(inv))
 
     if (openInvoice) {
       currentInvoiceId.value = openInvoice.id
-      const invoiceItems     = openInvoice.items ?? openInvoice.invoiceItemsDto ?? []
+      const invoiceItems     = (openInvoice as any).items ?? openInvoice.invoiceItemsDto ?? []
       existingItems.value    = invoiceItems.map((item: any) => ({
         id:       item.id,
         name:     item.menuItemName,
@@ -434,15 +429,13 @@ async function refreshInvoices() {
     }
 
   } else {
-    // ── زبون: يجلب عبر invoiceId المحفوظ ──
     if (!currentInvoiceId.value) return
     try {
       const invoice = await orderApi.getById(currentInvoiceId.value)
       if (!invoice) return
 
-      const isPending = invoice.invoiceStatus === 'Pending' || (invoice as any).status === 0
-      if (isPending) {
-        const items     = (invoice as any).invoiceItemsDto ?? (invoice as any).items ?? []
+      if (isPendingInvoice(invoice)) {
+        const items = (invoice as any).invoiceItemsDto ?? (invoice as any).items ?? []
         existingItems.value = items.map((item: any) => ({
           id:       item.id,
           name:     item.menuItemName,
@@ -451,7 +444,6 @@ async function refreshInvoices() {
           total:    item.totalPrice,
         }))
       } else {
-        // الفاتورة أُغلقت - امسح المحفوظ
         localStorage.removeItem(`invoice_${route.params.token}`)
         currentInvoiceId.value = null
         existingItems.value    = []
@@ -479,18 +471,15 @@ onMounted(async () => {
       }
 
     } else {
-      // ── زبون عبر QR ──
       const res           = await tableApi.getByToken(route.params.token as string)
       tableData.value     = res
-      allCategories.value = res.menu ?? []
+      allCategories.value = Array.isArray((res as any).menu) ? (res as any).menu : []
 
-      // جلب الفاتورة المحفوظة للزبون
       const savedInvoiceId = localStorage.getItem(`invoice_${route.params.token}`)
       if (savedInvoiceId) {
         try {
           const invoice = await orderApi.getById(Number(savedInvoiceId))
-          const isPending = invoice?.invoiceStatus === 'Pending' || (invoice as any)?.status === 0
-          if (invoice && isPending) {
+          if (invoice && isPendingInvoice(invoice)) {
             currentInvoiceId.value = invoice.id
             const items = (invoice as any).invoiceItemsDto ?? (invoice as any).items ?? []
             existingItems.value = items.map((item: any) => ({
@@ -510,7 +499,7 @@ onMounted(async () => {
     }
 
     if (activeCategories.value.length > 0) {
-      selectedCategoryId.value = activeCategories.value[0].id
+      selectedCategoryId.value = activeCategories.value[0]!.id
     }
 
   } catch {
@@ -521,8 +510,8 @@ onMounted(async () => {
 })
 
 // ── actions ────────────────────────────────────────────
-function openItem(item: MenuItemApi) {
-  selectedItem.value  = item
+function openItem(item: MenuItem) {
+  selectedItem.value  = item as unknown as MenuItemApi
   dialogVisible.value = true
 }
 
@@ -534,7 +523,7 @@ function onDialogAdd(cartItem: CartItemLocal) {
     c.note === cartItem.note
   )
   if (existingIdx !== -1) {
-    cartItems.value[existingIdx].quantity += cartItem.quantity
+    cartItems.value[existingIdx]!.quantity += cartItem.quantity
   } else {
     cartItems.value.push(cartItem)
   }
@@ -542,14 +531,14 @@ function onDialogAdd(cartItem: CartItemLocal) {
 
 function increaseItem(itemIndex: number) {
   if (cartItems.value[itemIndex]) {
-    cartItems.value[itemIndex].quantity++
+    cartItems.value[itemIndex]!.quantity++
   }
 }
 
 function decreaseItem(itemIndex: number) {
   if (itemIndex === -1) return
-  if (cartItems.value[itemIndex].quantity > 1) {
-    cartItems.value[itemIndex].quantity--
+  if ((cartItems.value[itemIndex]?.quantity ?? 0) > 1) {
+    cartItems.value[itemIndex]!.quantity--
   } else {
     cartItems.value.splice(itemIndex, 1)
   }
@@ -598,7 +587,6 @@ async function submitOrder() {
   submitting.value = true
   try {
     if (!isWaiterRoute.value) {
-      // ── زبون عبر QR ──
       const token = route.params.token as string
       const items = cartItems.value.map(item => ({
         menuItemId: item.menuItem.id,
@@ -607,14 +595,12 @@ async function submitOrder() {
         notes:      item.note || undefined,
       }))
       const res = await customerApi.submitOrder(token, items)
-      
-      // احفظ invoiceId إن رجع
+
       if (res?.id) {
         currentInvoiceId.value = res.id
         localStorage.setItem(`invoice_${token}`, String(res.id))
       }
     } else {
-      // ── ويتر/أدمن ──
       if (!tableId.value) return
       for (const item of cartItems.value) {
         if (!item.menuItem.id || item.menuItem.id === 0) continue

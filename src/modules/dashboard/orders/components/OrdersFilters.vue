@@ -59,7 +59,7 @@
               </label>
               <DatePicker
                 :modelValue="filters.startDate"
-                @update:modelValue="emit('update:filters', { ...filters, startDate: $event })"
+                @update:modelValue="emit('update:filters', { ...filters, startDate: ($event as Date | null) ?? null })"
                 dateFormat="yy-mm-dd"
                 placeholder="اختر تاريخاً"
                 showIcon
@@ -78,7 +78,7 @@
               </label>
               <DatePicker
                 :modelValue="filters.endDate"
-                @update:modelValue="emit('update:filters', { ...filters, endDate: $event })"
+                @update:modelValue="emit('update:filters', { ...filters, endDate: ($event as Date | null) ?? null })"
                 dateFormat="yy-mm-dd"
                 placeholder="اختر تاريخاً"
                 showIcon

@@ -88,13 +88,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import Button         from 'primevue/button'
-import ProgressSpinner from 'primevue/progressspinner'
+import { ref, onMounted }    from 'vue'
+import Button                from 'primevue/button'
+import ProgressSpinner       from 'primevue/progressspinner'
 
 import { useOrdersStore }    from './store/Orders.store'
-import OrdersHeader          from './components/Ordersheader.vue'
-import OrdersFilters         from './components/Ordersfilters.vue'
+import OrdersFilters         from './components/OrdersFilters.vue'
 import OrdersTable           from './components/OrdersTable.vue'
 import OrdersCards           from './components/OrdersCards.vue'
 import OrdersPagination      from './components/OrdersPagination.vue'

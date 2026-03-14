@@ -14,7 +14,7 @@ export interface Floor {
   id: number
   name: string
   isActive: boolean
-  discription?: string
+  description?: string
   tableCount: number
   tables: AdminTable[]
 }

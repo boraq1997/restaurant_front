@@ -57,7 +57,7 @@
         <div class="flex align-items-center justify-content-between border-top-1 border-100 pt-2 mt-1">
           <span class="text-xs text-400">{{ formatDate(order.createdAt) }} {{ formatTime(order.createdAt) }}</span>
           <div class="flex flex-column align-items-end gap-0">
-            <span v-if="order.discountPrice > 0" class="text-xs text-400 line-through">
+            <span v-if="(order.discountPrice ?? 0) > 0" class="text-xs text-400 line-through">
               {{ order.subTotalPrice?.toLocaleString() }} د.ع
             </span>
             <span class="font-bold text-primary">{{ order.finalPrice?.toLocaleString() }} د.ع</span>

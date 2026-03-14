@@ -110,7 +110,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useConfirm } from 'primevue/useconfirm'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
@@ -130,7 +129,6 @@ const emit = defineEmits<{
 }>()
 
 const confirm        = useConfirm()
-const toggleBtnRef   = ref()
 
 function confirmToggle(event: MouseEvent) {
   confirm.require({
