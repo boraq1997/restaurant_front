@@ -66,13 +66,17 @@ import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import { useAuthStore } from '../../modules/auth/store/auth.store'
 
-const auth        = useAuthStore()
-const visible     = ref(false)
+const auth         = useAuthStore()
+const visible      = ref(false)
 const isLoggingOut = ref(false)
+
+// ✅ هذا السطر هو الإصلاح
+const emit = defineEmits<{
+  beforeLogout: []
+}>()
 
 async function handleLogout() {
   isLoggingOut.value = true
-  // تأثير بصري قبل الخروج
   await new Promise(r => setTimeout(r, 800))
   auth.logout()
 }

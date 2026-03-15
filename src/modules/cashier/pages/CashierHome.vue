@@ -3,11 +3,10 @@
   <div class="min-h-screen surface-50" dir="rtl">
 
     <!-- Header -->
-    <header class="surface-card shadow-1 sticky top-0 z-5 border-bottom-1 border-200" 
+    <header class="surface-card shadow-1 sticky top-0 z-5 border-bottom-1 border-200"
             style="transition: all 0.25s ease;">
       <div class="px-3 py-3">
 
-        <!-- يختفي عند السكرول -->
         <Transition name="slide-up">
           <div v-if="!isScrolled" class="flex align-items-center justify-content-between mb-3">
             <div class="flex align-items-center gap-2">
@@ -52,85 +51,70 @@
         <div class="flex gap-2 overflow-x-auto pb-1">
           <div
             class="stats-card flex align-items-center gap-2 border-round-xl border-1 cursor-pointer flex-shrink-0"
-            :class="[
-              isScrolled ? 'px-2 py-1' : 'px-3 py-2',
-              activeFilter === 'unpaid' ? 'bg-red-100 border-red-400' : 'surface-card border-transparent shadow-1'
-            ]"
+            :class="[isScrolled ? 'px-2 py-1' : 'px-3 py-2', activeFilter === 'unpaid' ? 'bg-red-100 border-red-400' : 'surface-card border-transparent shadow-1']"
             @click="onFilter('unpaid')"
           >
             <i class="pi pi-times-circle text-red-600" :class="isScrolled ? 'text-sm' : ''" />
             <div class="flex flex-column">
               <span v-if="!isScrolled" class="text-xs text-500">غير مدفوع</span>
-              <span :class="isScrolled ? 'text-sm font-bold text-900' : 'text-lg font-bold text-900 line-height-1'">
-                {{ unpaidCount }}
-              </span>
+              <span :class="isScrolled ? 'text-sm font-bold text-900' : 'text-lg font-bold text-900 line-height-1'">{{ unpaidCount }}</span>
             </div>
           </div>
 
           <div
             class="stats-card flex align-items-center gap-2 border-round-xl border-1 cursor-pointer flex-shrink-0"
-            :class="[
-              isScrolled ? 'px-2 py-1' : 'px-3 py-2',
-              activeFilter === 'paid' ? 'bg-green-100 border-green-400' : 'surface-card border-transparent shadow-1'
-            ]"
+            :class="[isScrolled ? 'px-2 py-1' : 'px-3 py-2', activeFilter === 'paid' ? 'bg-green-100 border-green-400' : 'surface-card border-transparent shadow-1']"
             @click="onFilter('paid')"
           >
             <i class="pi pi-check-circle text-green-600" :class="isScrolled ? 'text-sm' : ''" />
             <div class="flex flex-column">
               <span v-if="!isScrolled" class="text-xs text-500">مدفوع</span>
-              <span :class="isScrolled ? 'text-sm font-bold text-900' : 'text-lg font-bold text-900 line-height-1'">
-                {{ paidCount }}
-              </span>
+              <span :class="isScrolled ? 'text-sm font-bold text-900' : 'text-lg font-bold text-900 line-height-1'">{{ paidCount }}</span>
             </div>
           </div>
 
           <div
             class="stats-card flex align-items-center gap-2 border-round-xl border-1 cursor-pointer flex-shrink-0"
-            :class="[
-              isScrolled ? 'px-2 py-1' : 'px-3 py-2',
-              activeFilter === 'empty' ? 'bg-blue-100 border-blue-400' : 'surface-card border-transparent shadow-1'
-            ]"
+            :class="[isScrolled ? 'px-2 py-1' : 'px-3 py-2', activeFilter === 'empty' ? 'bg-blue-100 border-blue-400' : 'surface-card border-transparent shadow-1']"
             @click="onFilter('empty')"
           >
             <i class="pi pi-th-large text-blue-600" :class="isScrolled ? 'text-sm' : ''" />
             <div class="flex flex-column">
               <span v-if="!isScrolled" class="text-xs text-500">فارغة</span>
-              <span :class="isScrolled ? 'text-sm font-bold text-900' : 'text-lg font-bold text-900 line-height-1'">
-                {{ emptyCount }}
-              </span>
+              <span :class="isScrolled ? 'text-sm font-bold text-900' : 'text-lg font-bold text-900 line-height-1'">{{ emptyCount }}</span>
+            </div>
+          </div>
+
+          <!-- ✅ إحصاء الطاولات المدمجة -->
+          <div
+            class="stats-card flex align-items-center gap-2 border-round-xl border-1 cursor-pointer flex-shrink-0"
+            :class="[isScrolled ? 'px-2 py-1' : 'px-3 py-2', activeFilter === 'merged' ? 'bg-purple-100 border-purple-400' : 'surface-card border-transparent shadow-1']"
+            @click="onFilter('merged')"
+          >
+            <i class="pi pi-arrows-h text-purple-600" :class="isScrolled ? 'text-sm' : ''" />
+            <div class="flex flex-column">
+              <span v-if="!isScrolled" class="text-xs text-500">مدمجة</span>
+              <span :class="isScrolled ? 'text-sm font-bold text-900' : 'text-lg font-bold text-900 line-height-1'">{{ mergedCount }}</span>
             </div>
           </div>
         </div>
 
         <!-- Floors Tab Bar -->
         <div v-if="hasFloors" class="flex gap-2 overflow-x-auto pt-3 pb-1" style="scrollbar-width: none;">
+          <button class="floor-tab" :class="{ active: selectedFloorId === null }" @click="selectedFloorId = null">الكل</button>
           <button
-            class="floor-tab"
-            :class="{ active: selectedFloorId === null }"
-            @click="selectedFloorId = null"
-          >
-            الكل
-          </button>
-          <button
-            v-for="floor in floors"
-            :key="floor.id"
-            class="floor-tab"
-            :class="{ active: selectedFloorId === floor.id }"
+            v-for="floor in floors" :key="floor.id"
+            class="floor-tab" :class="{ active: selectedFloorId === floor.id }"
             @click="selectedFloorId = floor.id"
-          >
-            {{ floor.name }}
-          </button>
+          >{{ floor.name }}</button>
         </div>
 
       </div>
     </header>
 
-    <!-- تنبيه لا توجد جلسة مفتوحة -->
+    <!-- تنبيه لا توجد جلسة -->
     <Transition name="fade">
-      <div
-        v-if="!activeSession && !loading"
-        class="mx-3 mt-3 p-3 bg-orange-50 border-1 border-orange-300 border-round-xl flex align-items-center gap-3"
-      >
+      <div v-if="!activeSession && !loading" class="mx-3 mt-3 p-3 bg-orange-50 border-1 border-orange-300 border-round-xl flex align-items-center gap-3">
         <i class="pi pi-exclamation-triangle text-orange-500 text-xl flex-shrink-0" />
         <div class="flex-1">
           <p class="m-0 font-bold text-orange-800 text-sm">لا توجد جلسة مفتوحة</p>
@@ -146,13 +130,7 @@
       <div class="flex align-items-center justify-content-between mb-3">
         <div class="flex align-items-center gap-2">
           <span class="font-bold text-800 text-sm">الطاولات</span>
-          <Tag
-            v-if="activeFilter"
-            severity="secondary"
-            rounded
-            class="cursor-pointer"
-            @click="activeFilter = null"
-          >
+          <Tag v-if="activeFilter" severity="secondary" rounded class="cursor-pointer" @click="activeFilter = null">
             <div class="flex align-items-center gap-1 text-xs">
               <span>{{ filterLabel }}</span>
               <i class="pi pi-times" style="font-size: 0.6rem" />
@@ -162,7 +140,6 @@
         <Button icon="pi pi-refresh" :loading="isRefreshing" severity="secondary" text rounded size="small" @click="refresh" />
       </div>
 
-      <!-- Loading -->
       <div v-if="loading" class="flex justify-content-center align-items-center py-8">
         <ProgressSpinner />
       </div>
@@ -183,10 +160,7 @@
               <TableGrid :tables="tablesForFloor(floor.id)" @select="onTableSelect" />
             </div>
           </template>
-          <div
-            v-if="visibleFloors.every(f => tablesForFloor(f.id).length === 0)"
-            class="flex flex-column align-items-center justify-content-center py-8 gap-3"
-          >
+          <div v-if="visibleFloors.every(f => tablesForFloor(f.id).length === 0)" class="flex flex-column align-items-center justify-content-center py-8 gap-3">
             <i class="pi pi-inbox text-4xl text-300" />
             <p class="text-500 m-0">لا توجد طاولات</p>
             <Button label="عرض الكل" text size="small" @click="activeFilter = null; selectedFloorId = null" />
@@ -196,10 +170,7 @@
         <!-- عرض بدون طوابق -->
         <template v-else>
           <Transition name="fade" mode="out-in">
-            <div
-              v-if="allFilteredTables.length === 0"
-              class="flex flex-column align-items-center justify-content-center py-8 gap-3"
-            >
+            <div v-if="allFilteredTables.length === 0" class="flex flex-column align-items-center justify-content-center py-8 gap-3">
               <i class="pi pi-inbox text-4xl text-300" />
               <p class="text-500 m-0">لا توجد طاولات</p>
               <Button label="عرض الكل" text size="small" @click="activeFilter = null" />
@@ -212,19 +183,44 @@
     </main>
 
     <!-- Drawer تفاصيل الطاولة -->
-    <Drawer
-      v-model:visible="drawerVisible"
-      position="left"
-      style="width: 100%; max-width: 480px;"
-      :modal="true"
-      dir="rtl"
-    >
+    <Drawer v-model:visible="drawerVisible" position="left" style="width: 100%; max-width: 480px;" :modal="true" dir="rtl">
       <template #header>
         <div class="flex align-items-center gap-2">
           <i class="pi pi-th-large text-primary" />
           <span class="font-bold text-lg">طاولة {{ selectedTable?.number }}</span>
+          <!-- ✅ badge الدمج -->
+          <Tag v-if="isSelectedMerged" severity="warn" rounded>
+            <div class="flex align-items-center gap-1 text-xs">
+              <i class="pi pi-arrows-h" style="font-size:0.65rem" />
+              <span>مدمجة</span>
+            </div>
+          </Tag>
         </div>
       </template>
+
+      <!-- ✅ معلومات الدمج -->
+      <div v-if="isSelectedMerged && selectedTable" class="mx-0 mb-3 p-3 bg-purple-50 border-1 border-purple-200 border-round-xl">
+        <div class="flex align-items-center gap-2 mb-2">
+          <i class="pi pi-arrows-h text-purple-600 text-sm" />
+          <span class="font-bold text-purple-800 text-sm">معلومات الدمج</span>
+        </div>
+        <div v-if="(selectedTable as any).primaryTableId" class="flex align-items-center gap-2 text-xs text-purple-700">
+          <i class="pi pi-arrow-left text-xs" />
+          <span>طاولة ثانوية — مدمجة مع طاولة رقم <strong>{{ (selectedTable as any).primaryTableNumber }}</strong></span>
+        </div>
+        <div v-else>
+          <div class="text-xs text-purple-700 mb-2">طاولة رئيسية — مدمجة معها:</div>
+          <div class="flex flex-wrap gap-1">
+            <span
+              v-for="mt in (selectedTable as any).mergedTables"
+              :key="mt.id"
+              class="text-xs bg-purple-100 text-purple-700 px-2 py-1 border-round font-bold"
+            >
+              طاولة {{ mt.number }}
+            </span>
+          </div>
+        </div>
+      </div>
 
       <div v-if="loadingInvoice" class="flex justify-content-center py-8">
         <ProgressSpinner style="width:32px;height:32px" />
@@ -268,6 +264,48 @@
 
     <!-- Invoice Dialog -->
     <InvoiceDialog v-model="invoiceVisible" :table="selectedTable" @confirm="onPaymentConfirm" />
+
+    <!-- ✅ Dialog سؤال رفع الدمج بعد الدفع -->
+    <Dialog
+      v-model:visible="unmergeDialogVisible"
+      :modal="true"
+      :draggable="false"
+      :closable="false"
+      style="width: 100%; max-width: 360px;"
+      dir="rtl"
+    >
+      <template #container>
+        <div class="unmerge-dialog">
+          <div class="icon-wrap">
+            <div class="icon-ring icon-ring--purple">
+              <i class="pi pi-arrows-h" />
+            </div>
+          </div>
+          <p class="dialog-title">رفع الدمج</p>
+          <p class="dialog-sub">
+            تم الدفع بنجاح. هل تريد رفع دمج الطاولات؟
+          </p>
+          <div class="dialog-actions">
+            <Button
+              label="رفع الدمج"
+              icon="pi pi-check"
+              severity="warning"
+              class="w-full"
+              :loading="unmergingLoading"
+              @click="handleUnmergeAfterPayment"
+            />
+            <Button
+              label="إبقاء الدمج"
+              severity="secondary"
+              outlined
+              class="w-full"
+              :disabled="unmergingLoading"
+              @click="unmergeDialogVisible = false"
+            />
+          </div>
+        </div>
+      </template>
+    </Dialog>
 
     <!-- CashBox Session Dialogs -->
     <CashboxSessionDialog v-model="openSessionDialogVisible" mode="open" :loading="sessionLoading" @confirm="handleOpenSession" />
@@ -314,13 +352,14 @@ import ProgressSpinner from 'primevue/progressspinner'
 import LogoutButton from '../../../components/shared/Logoutbutton.vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../auth/store/auth.store'
+import apiClient from '../../../services/api-client'
 
 const router          = useRouter()
 const toast           = useToast()
 const auth            = useAuthStore()
 const currentTime     = ref('')
 const isScrolled      = ref(false)
-const activeFilter    = ref<'unpaid' | 'paid' | 'empty' | null>(null)
+const activeFilter    = ref<'unpaid' | 'paid' | 'empty' | 'merged' | null>(null)
 const selectedFloorId = ref<number | null>(null)
 const isRefreshing    = ref(false)
 const loading         = ref(true)
@@ -332,7 +371,12 @@ const selectedTable   = ref<CashierTable | null>(null)
 const tables          = ref<CashierTable[]>([])
 const floors          = ref<Floor[]>([])
 
-// ── CashBox Session ──────────────────────────────────
+// ── Unmerge ───────────────────────────────────────────
+const unmergeDialogVisible = ref(false)
+const unmergingLoading     = ref(false)
+const tableIdToUnmerge     = ref<number | null>(null)
+
+// ── CashBox Session ───────────────────────────────────
 const activeSession              = ref<any | null>(null)
 const sessionLoading             = ref(false)
 const openSessionDialogVisible   = ref(false)
@@ -341,9 +385,14 @@ const logoutSessionDialogVisible = ref(false)
 
 let timer: ReturnType<typeof setInterval>
 
-function handleScroll() {
-  isScrolled.value = window.scrollY > 300
-}
+// ✅ هل الطاولة المختارة مدمجة؟
+const isSelectedMerged = computed(() => {
+  if (!selectedTable.value) return false
+  const t = selectedTable.value as any
+  return t.isMerged === true || t.status === 'Merged' || t.status === 3 || !!t.primaryTableId || (t.mergedTables?.length > 0)
+})
+
+function handleScroll() { isScrolled.value = window.scrollY > 300 }
 
 onMounted(async () => {
   updateTime()
@@ -361,12 +410,10 @@ onUnmounted(() => {
 })
 
 function updateTime() {
-  currentTime.value = new Date().toLocaleTimeString('ar-IQ', {
-    hour: '2-digit', minute: '2-digit',
-  })
+  currentTime.value = new Date().toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit' })
 }
 
-// ── CashBox Session Functions ────────────────────────
+// ── CashBox Session Functions ─────────────────────────
 async function fetchActiveSession() {
   try {
     const res = await cashBoxApi.getActiveSession()
@@ -376,13 +423,8 @@ async function fetchActiveSession() {
   }
 }
 
-function openOpenSession() {
-  openSessionDialogVisible.value = true
-}
-
-function openCloseSession() {
-  closeSessionDialogVisible.value = true
-}
+function openOpenSession()  { openSessionDialogVisible.value  = true }
+function openCloseSession() { closeSessionDialogVisible.value = true }
 
 async function handleOpenSession(amount: number) {
   sessionLoading.value = true
@@ -413,12 +455,9 @@ async function handleCloseSession(amount: number) {
   }
 }
 
-// ── Logout Handling ───────────────────────────────────
+// ── Logout ────────────────────────────────────────────
 function handleBeforeLogout() {
-  if (activeSession.value) {
-    logoutSessionDialogVisible.value = true
-    return false
-  }
+  if (activeSession.value) { logoutSessionDialogVisible.value = true; return false }
   return true
 }
 
@@ -442,13 +481,15 @@ function proceedLogout() {
   auth.logout()
 }
 
-// ── helpers ───────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────
 function isOpenInvoice(inv: any): boolean {
   return inv.invoiceStatus === 'Pending' || inv.invoiceStatus === 'Open' || inv.status === 0
 }
-
 function isPaidInvoice(inv: any): boolean {
   return inv.invoiceStatus === 'Paid' || inv.status === 1
+}
+function isMergedTable(t: any): boolean {
+  return t.status === 'Merged' || t.status === 3 || !!t.primaryTableId || (t.mergedTables?.length > 0)
 }
 
 // ── جلب البيانات ──────────────────────────────────────
@@ -464,13 +505,19 @@ async function loadTables() {
     const tableItems: any[] = Array.isArray(tablesRes) ? tablesRes : (tablesRes as any)?.items ?? []
 
     tables.value = tableItems.map((t: any) => ({
-      id:            t.id,
-      name:          t.name?.trim() ? t.name : `طاولة ${t.number}`,
-      number:        t.number,
-      capacity:      t.capacity,
-      floorId:       t.floorId ?? null,
-      paymentStatus: 'unpaid' as const,
-      order:         null,
+      id:                 t.id,
+      name:               t.name?.trim() ? t.name : `طاولة ${t.number}`,
+      number:             t.number,
+      capacity:           t.capacity,
+      floorId:            t.floorId ?? null,
+      paymentStatus:      'unpaid' as const,
+      order:              null,
+      // ✅ بيانات الدمج
+      isMerged:           isMergedTable(t),
+      status:             t.status,
+      primaryTableId:     t.primaryTableId     ?? null,
+      primaryTableNumber: t.primaryTableNumber ?? null,
+      mergedTables:       t.mergedTables       ?? [],
     }))
 
     tableItems.forEach((t: any) => {
@@ -509,7 +556,7 @@ function buildOrder(tableId: number, inv: any) {
     },
     quantity:        item.quantity,
     selectedOptions: item.selectedOptionsDto ?? [],
-    notes:            item.notes ?? '',
+    notes:           item.notes ?? '',
   }))
 
   return {
@@ -548,24 +595,27 @@ function applyFilter(list: CashierTable[]): CashierTable[] {
   if (activeFilter.value === 'unpaid') return list.filter(t => t.order && t.paymentStatus === 'unpaid')
   if (activeFilter.value === 'paid')   return list.filter(t => t.paymentStatus === 'paid')
   if (activeFilter.value === 'empty')  return list.filter(t => !t.order)
+  if (activeFilter.value === 'merged') return list.filter(t => (t as any).isMerged)
   return list
 }
 
 const unpaidCount = computed(() => tables.value.filter(t => t.order && t.paymentStatus === 'unpaid').length)
 const paidCount   = computed(() => tables.value.filter(t => t.paymentStatus === 'paid').length)
 const emptyCount  = computed(() => tables.value.filter(t => !t.order).length)
+const mergedCount = computed(() => tables.value.filter(t => (t as any).isMerged).length)
 
 const filterLabel = computed(() => {
   switch (activeFilter.value) {
     case 'unpaid': return 'غير مدفوع'
     case 'paid':   return 'مدفوع'
     case 'empty':  return 'فارغة'
+    case 'merged': return 'مدمجة'
     default: return ''
   }
 })
 
 // ── Actions ───────────────────────────────────────────
-function onFilter(filter: 'unpaid' | 'paid' | 'empty') {
+function onFilter(filter: 'unpaid' | 'paid' | 'empty' | 'merged') {
   activeFilter.value = activeFilter.value === filter ? null : filter
 }
 
@@ -610,17 +660,32 @@ function confirmClearTable() {
 function clearTable() {
   if (!selectedTable.value) return
   clearingTable.value = true
-
   const idx = tables.value.findIndex(t => t.id === selectedTable.value!.id)
-  if (idx !== -1) {
-    if (tables.value[idx]) {
-      tables.value[idx] = { ...tables.value[idx]!, order: null, paymentStatus: 'unpaid' }
-    }
+  if (idx !== -1 && tables.value[idx]) {
+    tables.value[idx] = { ...tables.value[idx]!, order: null, paymentStatus: 'unpaid' }
   }
-
   clearingTable.value = false
   drawerVisible.value = false
   toast.add({ severity: 'info', summary: 'تم التفريغ', detail: `طاولة ${selectedTable.value.number} أصبحت فارغة`, life: 3000 })
+}
+
+// ── ✅ رفع الدمج بعد الدفع ────────────────────────────
+async function handleUnmergeAfterPayment() {
+  if (!tableIdToUnmerge.value) return
+  unmergingLoading.value = true
+  try {
+    await apiClient.post('/tables/unmerge', {
+      tablesToUnmerge: [tableIdToUnmerge.value],
+    })
+    toast.add({ severity: 'success', summary: 'تم', detail: 'تم رفع الدمج بنجاح', life: 3000 })
+    unmergeDialogVisible.value = false
+    await loadTables()
+  } catch {
+    toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل رفع الدمج', life: 3000 })
+  } finally {
+    unmergingLoading.value  = false
+    tableIdToUnmerge.value  = null
+  }
 }
 
 async function onPaymentConfirm(payload: {
@@ -660,6 +725,13 @@ async function onPaymentConfirm(payload: {
 
     drawerVisible.value = false
     toast.add({ severity: 'success', summary: 'تم الدفع', detail: `تم استلام دفع طاولة ${selectedTable.value.number} بنجاح`, life: 3000 })
+
+    // ✅ إذا الطاولة مدمجة، اسأل عن رفع الدمج
+    if (isSelectedMerged.value) {
+      tableIdToUnmerge.value     = selectedTable.value.id
+      unmergeDialogVisible.value = true
+    }
+
   } catch {
     toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل إتمام الدفع', life: 3000 })
   }
@@ -670,38 +742,19 @@ async function onPaymentConfirm(payload: {
 .fade-enter-active, .fade-leave-active { transition: opacity 0.15s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 
-.slide-up-enter-active, .slide-up-leave-active {
-  transition: all 0.25s ease;
-  overflow: hidden;
-}
-.slide-up-enter-from, .slide-up-leave-to {
-  opacity: 0;
-  max-height: 0;
-  margin-bottom: 0 !important;
-}
-.slide-up-enter-to, .slide-up-leave-from {
-  opacity: 1;
-  max-height: 60px;
-}
+.slide-up-enter-active, .slide-up-leave-active { transition: all 0.25s ease; overflow: hidden; }
+.slide-up-enter-from, .slide-up-leave-to { opacity: 0; max-height: 0; margin-bottom: 0 !important; }
+.slide-up-enter-to, .slide-up-leave-from { opacity: 1; max-height: 60px; }
 
-.stats-card {
-  transition: all 0.25s ease;
-}
+.stats-card { transition: all 0.25s ease; }
 
 .floor-tab {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.35rem 1rem;
-  border-radius: 999px;
+  display: inline-flex; align-items: center;
+  padding: 0.35rem 1rem; border-radius: 999px;
   border: 1px solid var(--p-surface-300);
-  background: var(--p-surface-0);
-  color: var(--p-text-color-secondary);
-  font-size: 0.8rem;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
-  transition: all 0.15s ease;
+  background: var(--p-surface-0); color: var(--p-text-color-secondary);
+  font-size: 0.8rem; font-weight: 500; cursor: pointer;
+  white-space: nowrap; flex-shrink: 0; transition: all 0.15s ease;
 }
 .floor-tab:hover  { background: var(--p-surface-100); color: var(--p-text-color); }
 .floor-tab.active { background: var(--p-primary-color); border-color: var(--p-primary-color); color: #fff; }
@@ -711,27 +764,35 @@ async function onPaymentConfirm(payload: {
   50%       { opacity: 0.4; }
 }
 
-.logout-session-dialog {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 2rem 1.5rem 1.5rem;
-  border-radius: 16px;
-  background: var(--p-surface-0);
-  text-align: center;
+/* ── Unmerge Dialog ── */
+.unmerge-dialog {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 2rem 1.5rem 1.5rem; border-radius: 16px;
+  background: var(--p-surface-0); text-align: center;
 }
 .icon-wrap { margin-bottom: 1.25rem; }
 .icon-ring {
   width: 72px; height: 72px; border-radius: 50%;
-  background: var(--p-red-100);
   display: flex; align-items: center; justify-content: center;
   animation: pulse 2s ease-in-out infinite;
 }
-.icon-ring i { font-size: 1.75rem; color: var(--p-red-500); }
+.icon-ring--purple { background: var(--p-purple-100); }
+.icon-ring--purple i { font-size: 1.75rem; color: var(--p-purple-500); }
+
 @keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.2); }
-  50%       { box-shadow: 0 0 0 10px rgba(239,68,68,0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(168,85,247,0.2); }
+  50%       { box-shadow: 0 0 0 10px rgba(168,85,247,0); }
 }
+
+/* ── Logout Dialog ── */
+.logout-session-dialog {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 2rem 1.5rem 1.5rem; border-radius: 16px;
+  background: var(--p-surface-0); text-align: center;
+}
+.icon-ring { background: var(--p-red-100); }
+.icon-ring i { font-size: 1.75rem; color: var(--p-red-500); }
+
 .dialog-title { font-size: 1.15rem; font-weight: 700; margin: 0 0 0.4rem; color: var(--p-text-color); }
 .dialog-sub { font-size: 0.875rem; color: var(--p-text-muted-color); margin: 0 0 1.5rem; line-height: 1.6; }
 .dialog-actions { display: flex; flex-direction: column; gap: 0.75rem; width: 100%; }

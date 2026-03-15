@@ -1,20 +1,27 @@
+<!-- src/modules/dashboard/tables/pages/TablesPage.vue -->
 <template>
   <div class="min-h-screen surface-50" dir="rtl">
 
-    <div v-if="loading" class="flex justify-content-center align-items-center py-8">
-      <ProgressSpinner style="width:40px;height:40px" />
-    </div>
+    <!-- ── Toolbar ─────────────────────────────────────── -->
+    <div class="px-3 py-3 surface-card border-bottom-1 border-200">
 
-    <template v-else>
-
-      <!-- Toolbar -->
-      <div class="px-3 py-3 flex align-items-center justify-content-between">
+      <!-- الصف الأول: العنوان + الأزرار -->
+      <div class="flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
         <div class="flex align-items-center gap-2">
           <span class="font-bold text-800">الطاولات</span>
           <Tag :value="String(filteredTotal)" severity="secondary" rounded />
           <Tag v-if="hasActiveFilter" value="فلتر مفعّل" severity="warn" rounded class="text-xs" />
         </div>
-        <div class="flex gap-2">
+        <div class="flex gap-2 flex-wrap">
+          <Button
+            icon="pi pi-qrcode"
+            label="تهيئة QR للكل"
+            severity="secondary"
+            size="small"
+            :loading="initializingQr"
+            v-tooltip.bottom="'إنشاء QR لجميع الطاولات التي لا تملك رمزاً'"
+            @click="handleInitializeQr"
+          />
           <Button
             :icon="filtersOpen ? 'pi pi-filter-slash' : 'pi pi-filter'"
             :severity="hasActiveFilter ? 'warn' : 'secondary'"
@@ -31,11 +38,24 @@
         </div>
       </div>
 
+      <!-- بحث -->
+      <div class="mb-3">
+        <span class="p-input-icon-right w-full">
+          <i class="pi pi-search" />
+          <InputText
+            v-model="searchQuery"
+            placeholder="ابحث باسم الطاولة أو رقمها..."
+            class="w-full"
+            size="small"
+          />
+        </span>
+      </div>
+
       <!-- فلاتر Collapsible -->
       <Transition name="slide-down">
-        <div v-if="filtersOpen" class="px-3 pb-3 flex flex-column gap-2 surface-card border-bottom-1 border-200">
+        <div v-if="filtersOpen" class="flex flex-column gap-2">
 
-          <div class="flex align-items-center gap-2 overflow-x-auto py-2">
+          <div class="flex align-items-center gap-2 overflow-x-auto py-1">
             <span class="text-xs text-500 flex-shrink-0 font-medium">الطابق:</span>
             <button class="filter-chip" :class="{ active: filterFloor === null }" @click="filterFloor = null">الكل</button>
             <button
@@ -45,7 +65,7 @@
             >{{ floor.name }}</button>
           </div>
 
-          <div class="flex align-items-center gap-2 overflow-x-auto py-2">
+          <div class="flex align-items-center gap-2 overflow-x-auto py-1">
             <span class="text-xs text-500 flex-shrink-0 font-medium">الكراسي:</span>
             <button class="filter-chip" :class="{ active: filterCapacity === null }" @click="filterCapacity = null">الكل</button>
             <button
@@ -55,7 +75,7 @@
             >{{ range.label }}</button>
           </div>
 
-          <div class="flex align-items-center gap-2 overflow-x-auto py-2">
+          <div class="flex align-items-center gap-2 overflow-x-auto py-1">
             <span class="text-xs text-500 flex-shrink-0 font-medium">الحالة:</span>
             <button class="filter-chip" :class="{ active: filterStatus === null }" @click="filterStatus = null">الكل</button>
             <button
@@ -77,6 +97,15 @@
         </div>
       </Transition>
 
+    </div>
+
+    <!-- ── Loading ────────────────────────────────────── -->
+    <div v-if="loading" class="flex justify-content-center align-items-center py-8">
+      <ProgressSpinner style="width:40px;height:40px" />
+    </div>
+
+    <template v-else>
+
       <!-- لا توجد طوابق -->
       <div v-if="floors.length === 0"
         class="flex flex-column align-items-center justify-content-center py-8 gap-3">
@@ -85,17 +114,17 @@
         <Button label="إضافة طابق" icon="pi pi-plus" @click="openCreateFloor" />
       </div>
 
-      <!-- الفلتر لا يعطي نتائج -->
-      <div v-else-if="filteredTotal === 0 && hasActiveFilter"
+      <!-- لا نتائج للفلتر -->
+      <div v-else-if="filteredTotal === 0 && (hasActiveFilter || searchQuery)"
         class="flex flex-column align-items-center justify-content-center py-8 gap-3">
-        <i class="pi pi-filter text-5xl text-300" />
-        <p class="text-500 m-0">لا توجد نتائج للفلتر الحالي</p>
-        <Button label="مسح الفلاتر" text size="small" @click="clearFilters" />
+        <i class="pi pi-search text-5xl text-300" />
+        <p class="text-500 m-0">لا توجد نتائج</p>
+        <Button label="مسح البحث والفلاتر" text size="small" @click="clearAll" />
       </div>
 
       <!-- Grid -->
       <main v-else class="px-3 pb-6">
-        <div v-for="floor in visibleFloors" :key="floor.id" class="mb-5">
+        <div v-for="floor in visibleFloors" :key="floor.id" class="mb-5 pt-4">
 
           <!-- عنوان الطابق -->
           <div class="flex align-items-center justify-content-between mb-3">
@@ -108,6 +137,12 @@
               <Tag v-if="!floor.isActive" value="معطّل" severity="secondary" rounded class="text-xs" />
             </div>
             <div class="flex gap-1">
+              <Button
+                icon="pi pi-arrow-right-arrow-left"
+                severity="info" text rounded size="small"
+                v-tooltip.top="'نقل طاولات لهذا الطابق'"
+                @click="openMoveToFloor(floor)"
+              />
               <Button icon="pi pi-pencil" severity="secondary" text rounded size="small"
                 v-tooltip.top="'تعديل الطابق'" @click="openEditFloor(floor)" />
               <Button icon="pi pi-trash" severity="danger" text rounded size="small"
@@ -140,7 +175,9 @@
 
     </template>
 
-    <!-- Dialogs -->
+    <!-- ── Dialogs ─────────────────────────────────────── -->
+
+    <!-- طاولة -->
     <TableDialog
       v-model="tableDialogVisible"
       :table="editingTable"
@@ -149,9 +186,77 @@
       :loading="savingTable"
       @save="handleSaveTable"
     />
-    <FloorDialog v-model="floorDialogVisible" :floor="editingFloor" :loading="savingFloor" @save="handleSaveFloor" />
+
+    <!-- طابق -->
+    <FloorDialog
+      v-model="floorDialogVisible"
+      :floor="editingFloor"
+      :loading="savingFloor"
+      @save="handleSaveFloor"
+    />
+
+    <!-- QR -->
     <TableQrDialog v-model="qrVisible" :table="qrTable" />
-    <ConfirmDeleteDialog v-model="deleteDialogVisible" :message="deleteMessage" :loading="deleting" @confirm="onDeleteConfirmed" />
+
+    <!-- حذف -->
+    <ConfirmDeleteDialog
+      v-model="deleteDialogVisible"
+      :message="deleteMessage"
+      :loading="deleting"
+      @confirm="onDeleteConfirmed"
+    />
+
+    <!-- ── Dialog نقل طاولات لطابق ──────────────────── -->
+    <Dialog
+      v-model:visible="moveDialogVisible"
+      :modal="true" :draggable="false"
+      style="width: 100%; max-width: 480px;"
+      dir="rtl"
+    >
+      <template #header>
+        <div class="flex align-items-center gap-2">
+          <i class="pi pi-arrow-right-arrow-left text-primary" />
+          <span class="font-bold">نقل طاولات إلى: {{ moveTargetFloor?.name }}</span>
+        </div>
+      </template>
+
+      <div class="flex flex-column gap-3">
+        <p class="text-sm text-500 m-0">اختر الطاولات التي تريد نقلها إلى هذا الطابق:</p>
+
+        <!-- الطوابق الأخرى -->
+        <div v-for="floor in otherFloors" :key="floor.id" class="mb-2">
+          <p class="text-xs font-bold text-400 mb-2 m-0">{{ floor.name }}</p>
+          <div class="flex flex-wrap gap-2">
+            <div
+              v-for="table in floor.tables" :key="table.id"
+              class="move-table-chip"
+              :class="{ selected: selectedTableIds.includes(table.id) }"
+              @click="toggleTableSelection(table.id)"
+            >
+              <i class="pi pi-th-large text-xs" />
+              {{ table.name || `طاولة ${table.number}` }}
+            </div>
+          </div>
+        </div>
+
+        <div v-if="otherFloors.every(f => f.tables.length === 0)" class="text-center text-400 text-sm py-3">
+          لا توجد طاولات في الطوابق الأخرى
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="flex gap-2 justify-content-end">
+          <Button label="إلغاء" severity="secondary" outlined @click="moveDialogVisible = false" />
+          <Button
+            label="نقل"
+            icon="pi pi-check"
+            :disabled="selectedTableIds.length === 0"
+            :loading="movingTables"
+            @click="handleMoveTables"
+          />
+        </div>
+      </template>
+    </Dialog>
 
   </div>
 </template>
@@ -161,25 +266,31 @@ import { ref, computed, onMounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { tablesAdminApi } from '../api/tables-admin.api'
 import type { AdminTable, Floor, CreateTableDto, CreateFloorDto } from '../types/tables-admin.types'
-import TableCard from '../components/TableCard.vue'
-import TableDialog from '../components/TableDialog.vue'
-import FloorDialog from '../components/FloorDialog.vue'
-import TableQrDialog from '../components/TableQrDialog.vue'
+import TableCard        from '../components/TableCard.vue'
+import TableDialog      from '../components/TableDialog.vue'
+import FloorDialog      from '../components/FloorDialog.vue'
+import TableQrDialog    from '../components/TableQrDialog.vue'
 import ConfirmDeleteDialog from '../../../../components/shared/ConfirmDeleteDialog.vue'
-import Button from 'primevue/button'
-import Tag from 'primevue/tag'
+import Button          from 'primevue/button'
+import Tag             from 'primevue/tag'
+import InputText       from 'primevue/inputtext'
+import Dialog          from 'primevue/dialog'
 import ProgressSpinner from 'primevue/progressspinner'
+import apiClient       from '../../../../services/api-client'
 
 const toast = useToast()
 
-const floors       = ref<Floor[]>([])
-const loading      = ref(true)
-const isRefreshing = ref(false)
-const savingTable  = ref(false)
-const savingFloor  = ref(false)
-const deleting     = ref(false)
+// ── State ──────────────────────────────────────────────
+const floors        = ref<Floor[]>([])
+const loading       = ref(true)
+const isRefreshing  = ref(false)
+const savingTable   = ref(false)
+const savingFloor   = ref(false)
+const deleting      = ref(false)
+const initializingQr = ref(false)
 
-// ── فلاتر ──────────────────────────────────────────────
+// ── Search & Filters ───────────────────────────────────
+const searchQuery    = ref('')
 const filtersOpen    = ref(false)
 const filterFloor    = ref<number | null>(null)
 const filterCapacity = ref<string | null>(null)
@@ -199,16 +310,22 @@ const capacityRanges = [
 ]
 
 // ── Dialogs ────────────────────────────────────────────
-const tableDialogVisible  = ref(false)
-const floorDialogVisible  = ref(false)
-const editingTable        = ref<AdminTable | null>(null)
-const editingFloor        = ref<Floor | null>(null)
-const defaultFloorId      = ref<number | null>(null)
-const qrVisible           = ref(false)
-const qrTable             = ref<AdminTable | null>(null)
+const tableDialogVisible = ref(false)
+const floorDialogVisible = ref(false)
+const editingTable       = ref<AdminTable | null>(null)
+const editingFloor       = ref<Floor | null>(null)
+const defaultFloorId     = ref<number | null>(null)
+const qrVisible          = ref(false)
+const qrTable            = ref<AdminTable | null>(null)
 const deleteDialogVisible = ref(false)
 const deleteMessage       = ref('')
 const pendingDelete       = ref<{ type: 'table' | 'floor'; id: number } | null>(null)
+
+// ── Move Dialog ────────────────────────────────────────
+const moveDialogVisible  = ref(false)
+const moveTargetFloor    = ref<Floor | null>(null)
+const selectedTableIds   = ref<number[]>([])
+const movingTables       = ref(false)
 
 onMounted(() => loadAll())
 
@@ -230,20 +347,36 @@ async function refresh() {
 }
 
 // ── Computed ───────────────────────────────────────────
-const visibleFloors = computed(() =>
-  filterFloor.value !== null
-    ? floors.value.filter(f => f.id === filterFloor.value)
-    : floors.value
-)
+const visibleFloors = computed(() => {
+  if (filterFloor.value !== null) {
+    return floors.value.filter(f => f.id === filterFloor.value)
+  }
+  return floors.value
+})
 
 function tablesForFloor(floorId: number): AdminTable[] {
   let result = floors.value.find(f => f.id === floorId)?.tables ?? []
+
+  // فلتر البحث
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.trim().toLowerCase()
+    result = result.filter(t =>
+      t.name?.toLowerCase().includes(q) ||
+      String(t.number).includes(q)
+    )
+  }
+
+  // فلتر الكراسي
   if (filterCapacity.value !== null) {
     const range = capacityRanges.find(r => r.label === filterCapacity.value)
     if (range) result = result.filter(t => t.capacity >= range.min && t.capacity <= range.max)
   }
-  if (filterStatus.value !== null)
+
+  // فلتر الحالة
+  if (filterStatus.value !== null) {
     result = result.filter(t => t.status === filterStatus.value)
+  }
+
   return result.slice().sort((a, b) => a.number - b.number)
 }
 
@@ -259,6 +392,11 @@ function clearFilters() {
   filterFloor.value    = null
   filterCapacity.value = null
   filterStatus.value   = null
+}
+
+function clearAll() {
+  clearFilters()
+  searchQuery.value = ''
 }
 
 // ── طاولات CRUD ────────────────────────────────────────
@@ -300,7 +438,7 @@ async function handleSaveTable(data: CreateTableDto) {
 
 function handleDeleteTable(t: AdminTable) {
   pendingDelete.value       = { type: 'table', id: t.id }
-  deleteMessage.value       = `هل تريد حذف طاولة رقم ${t.number}؟ لا يمكن التراجع عن هذا الإجراء.`
+  deleteMessage.value       = `هل تريد حذف طاولة رقم ${t.number}؟`
   deleteDialogVisible.value = true
 }
 
@@ -358,25 +496,81 @@ async function onDeleteConfirmed() {
   } catch {
     toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل الحذف', life: 3000 })
   } finally {
-    deleting.value       = false
-    pendingDelete.value  = null
+    deleting.value      = false
+    pendingDelete.value = null
   }
 }
 
+// ── QR ────────────────────────────────────────────────
 function showQr(t: AdminTable) {
-  qrTable.value  = t
+  qrTable.value   = t
   qrVisible.value = true
+}
+
+// ── تهيئة QR للكل ────────────────────────────────────
+async function handleInitializeQr() {
+  initializingQr.value = true
+  try {
+    await apiClient.post('/tables/initialize-qr-tokens', {})
+    toast.add({ severity: 'success', summary: 'تم', detail: 'تم تهيئة QR لجميع الطاولات', life: 3000 })
+    await loadAll()
+  } catch {
+    toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل تهيئة QR', life: 3000 })
+  } finally {
+    initializingQr.value = false
+  }
+}
+
+// ── نقل طاولات لطابق ─────────────────────────────────
+const otherFloors = computed(() =>
+  moveTargetFloor.value
+    ? floors.value.filter(f => f.id !== moveTargetFloor.value!.id && f.tables.length > 0)
+    : []
+)
+
+function openMoveToFloor(floor: Floor) {
+  moveTargetFloor.value  = floor
+  selectedTableIds.value = []
+  moveDialogVisible.value = true
+}
+
+function toggleTableSelection(id: number) {
+  const idx = selectedTableIds.value.indexOf(id)
+  if (idx === -1) selectedTableIds.value.push(id)
+  else            selectedTableIds.value.splice(idx, 1)
+}
+
+async function handleMoveTables() {
+  if (!moveTargetFloor.value || selectedTableIds.value.length === 0) return
+  movingTables.value = true
+  try {
+    await apiClient.post(`/tables/move/${moveTargetFloor.value.id}`, {
+      tableIds: selectedTableIds.value,
+    })
+    toast.add({
+      severity: 'success', summary: 'تم',
+      detail: `تم نقل ${selectedTableIds.value.length} طاولة إلى ${moveTargetFloor.value.name}`,
+      life: 3000,
+    })
+    moveDialogVisible.value = false
+    await loadAll()
+  } catch {
+    toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل نقل الطاولات', life: 3000 })
+  } finally {
+    movingTables.value = false
+  }
 }
 </script>
 
 <style scoped>
+/* ── Slide Transition ─────────────────────────────── */
 .slide-down-enter-active, .slide-down-leave-active {
-  transition: all 0.2s ease;
-  overflow: hidden;
+  transition: all 0.2s ease; overflow: hidden;
 }
 .slide-down-enter-from, .slide-down-leave-to { opacity: 0; max-height: 0; }
 .slide-down-enter-to, .slide-down-leave-from { opacity: 1; max-height: 300px; }
 
+/* ── Filter Chips ─────────────────────────────────── */
 .filter-chip {
   display: inline-flex; align-items: center; gap: 0.35rem;
   padding: 0.3rem 0.75rem; border-radius: 999px;
@@ -388,13 +582,13 @@ function showQr(t: AdminTable) {
 .filter-chip.active { background: var(--p-primary-color); border-color: var(--p-primary-color); color: #fff; }
 .filter-chip.status-1.active { background: var(--p-orange-500); border-color: var(--p-orange-500); }
 .filter-chip.status-2.active { background: var(--p-blue-500);   border-color: var(--p-blue-500);   }
-.filter-chip.status-3.active { background: var(--p-surface-500); border-color: var(--p-surface-500); }
+.filter-chip.status-3.active { background: #7c3aed; border-color: #7c3aed; }
 
 .status-dot { width: 0.45rem; height: 0.45rem; border-radius: 50%; flex-shrink: 0; }
 .dot-0 { background: var(--p-green-500); }
 .dot-1 { background: var(--p-orange-500); }
 .dot-2 { background: var(--p-blue-500); }
-.dot-3 { background: var(--p-surface-400); }
+.dot-3 { background: #7c3aed; }
 
 .clear-btn {
   display: inline-flex; align-items: center; gap: 0.35rem;
@@ -404,4 +598,19 @@ function showQr(t: AdminTable) {
 }
 .clear-btn:hover { color: var(--p-red-500); }
 .clear-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* ── Move Dialog Chips ────────────────────────────── */
+.move-table-chip {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.4rem 0.85rem; border-radius: 10px;
+  border: 1.5px solid var(--p-surface-300);
+  background: var(--p-surface-0); color: var(--p-text-color-secondary);
+  font-size: 0.8rem; font-weight: 500; cursor: pointer;
+  transition: all 0.15s; white-space: nowrap;
+}
+.move-table-chip:hover { border-color: var(--p-primary-color); color: var(--p-primary-color); }
+.move-table-chip.selected {
+  background: var(--p-primary-color); border-color: var(--p-primary-color);
+  color: #fff;
+}
 </style>

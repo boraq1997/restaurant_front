@@ -1,0 +1,20 @@
+scp -r dist/ root@72.62.63.16:/home/restaurant-pos/
+
+على السيرفر:
+3. أعد بناء الـ Image:
+bashssh root@72.62.63.16
+cd /home/restaurant-pos
+docker build -t restaurant-pos:latest .
+
+4. أعد تشغيل الـ Container:
+bashdocker stop restaurant-pos
+docker rm restaurant-pos
+docker run -d \
+  --name restaurant-pos \
+  --restart always \
+  -p 8585:80 \
+  restaurant-pos:latest
+
+
+هل تريد أن أصنع لك script واحد تشغّله من جهازك بأمر واحد فيقوم بكل هذه الخطوات تلقائياً؟
+

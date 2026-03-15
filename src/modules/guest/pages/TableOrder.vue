@@ -304,7 +304,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { menuApi, orderApi, tableApi, customerApi } from '../../../services/api.service'
@@ -361,6 +361,20 @@ const existingItems = ref<{
   note?: string
   selectedOptions?: { id: number; name: string; price: number }[]
 }[]>([])
+
+// ── مفتاح السلة في localStorage (فريد لكل طاولة) ──
+const CART_KEY = computed(() =>
+  `cart_${route.params.id ?? route.params.token}`
+)
+
+// ── حفظ السلة تلقائياً عند كل تغيير ──
+watch(cartItems, (val) => {
+  if (val.length > 0) {
+    localStorage.setItem(CART_KEY.value, JSON.stringify(val))
+  } else {
+    localStorage.removeItem(CART_KEY.value)
+  }
+}, { deep: true })
 
 function normalizeItem(item: MenuItemApi): MenuItem {
   return { ...item, image: item.image ?? '' } as unknown as MenuItem
@@ -483,6 +497,16 @@ async function refreshInvoices() {
 }
 
 onMounted(async () => {
+  // ── استعادة السلة المحفوظة عند الـ refresh ──
+  try {
+    const savedCart = localStorage.getItem(CART_KEY.value)
+    if (savedCart) {
+      cartItems.value = JSON.parse(savedCart)
+    }
+  } catch {
+    localStorage.removeItem(CART_KEY.value)
+  }
+
   try {
     if (isWaiterRoute.value) {
       const [tableRes, menuRes] = await Promise.all([
@@ -650,6 +674,7 @@ async function submitOrder() {
 
     lastSubmittedItems.value = [...cartItems.value]
     cartItems.value          = []
+    localStorage.removeItem(CART_KEY.value)  // ── مسح السلة بعد الإرسال ──
     cartRef.value?.closeDrawer()
     successVisible.value     = true
 

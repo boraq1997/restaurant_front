@@ -1,106 +1,122 @@
 <template>
-  <div class="admin-layout" dir="rtl">
+  <div class="shell" dir="rtl">
 
-    <!-- Mobile Overlay Backdrop -->
-    <Transition name="backdrop-fade">
-      <div
-        v-if="isMobileOpen"
-        class="sidebar-backdrop"
-        @click="isMobileOpen = false"
-      />
+    <!-- Mobile backdrop -->
+    <Transition name="bd">
+      <div v-if="mobileOpen" class="backdrop" @click="mobileOpen = false" />
     </Transition>
 
-    <!-- Sidebar -->
-    <aside
-      class="admin-sidebar"
-      :class="{
-        collapsed,
-        'mobile-open': isMobileOpen,
-        'mobile-hidden': !isMobileOpen
-      }"
-    >
+    <!-- ═══════════════════════════════
+         SIDEBAR
+    ═══════════════════════════════ -->
+    <aside class="sidebar" :class="{ slim: slim, open: mobileOpen }">
 
-      <!-- Logo + Toggle -->
-      <div class="sidebar-header">
-        <div v-if="!collapsed" class="flex align-items-center gap-2 overflow-hidden">
-          <div class="sidebar-logo">
-            <i class="pi pi-shop text-white text-sm" />
-          </div>
-          <div>
-            <p class="font-bold text-sm m-0 line-height-1 text-900">مطعمنا</p>
-            <span class="text-xs text-500">لوحة التحكم</span>
-          </div>
+      <!-- Brand -->
+      <div class="brand">
+        <div class="brand-mark">
+          <i class="pi pi-shop" />
         </div>
-        <div v-else class="sidebar-logo mx-auto">
-          <i class="pi pi-shop text-white text-sm" />
-        </div>
-
-        <Button
-          :icon="collapsed ? 'pi pi-align-right' : 'pi pi-align-left'"
-          text rounded size="small" severity="secondary"
-          class="flex-shrink-0 desktop-toggle"
-          @click="collapsed = !collapsed"
-        />
-
-        <!-- Close button shown only on mobile -->
-        <Button
-          icon="pi pi-times"
-          text rounded size="small" severity="secondary"
-          class="flex-shrink-0 mobile-close-btn"
-          @click="isMobileOpen = false"
-        />
+        <Transition name="text-fade">
+          <div v-if="!slim" class="brand-text">
+            <span class="brand-name">مطعمنا</span>
+            <span class="brand-tag">POS System</span>
+          </div>
+        </Transition>
+        <button class="slim-btn dt-only" @click="slim = !slim">
+          <i class="pi" :class="slim ? 'pi-angle-left' : 'pi-angle-right'" />
+        </button>
+        <button class="slim-btn mob-only" @click="mobileOpen = false">
+          <i class="pi pi-times" />
+        </button>
       </div>
 
-      <!-- Nav -->
-      <nav class="sidebar-nav">
+      <!-- Navigation -->
+      <nav class="nav">
+
+        <!-- إدارة -->
+        <p class="nav-group-title" v-if="!slim">إدارة</p>
         <div
-          v-for="item in navItems" :key="item.to"
-          class="nav-item"
-          :class="{ active: isActive(item.to) }"
-          v-tooltip.left="collapsed ? item.label : ''"
-          @click="navigateTo(item.to)"
+          v-for="item in mgmtNav"
+          :key="item.to"
+          class="nav-link"
+          :class="{ 'nav-link--on': isOn(item.to) }"
+          v-tooltip.left="slim ? item.label : undefined"
+          @click="go(item.to)"
         >
-          <i :class="item.icon" class="nav-icon" />
-          <Transition name="label-fade">
-            <span v-if="!collapsed" class="nav-label">{{ item.label }}</span>
+          <span class="nl-icon"><i :class="item.icon" /></span>
+          <Transition name="text-fade">
+            <span v-if="!slim" class="nl-text">{{ item.label }}</span>
           </Transition>
+          <span v-if="!slim && isOn(item.to)" class="nl-pip" />
         </div>
+
+        <div class="nav-sep" />
+
+        <!-- عمليات -->
+        <p class="nav-group-title" v-if="!slim">عمليات</p>
+        <div
+          v-for="item in opsNav"
+          :key="item.to"
+          class="nav-link"
+          :class="{ 'nav-link--on': isOn(item.to) }"
+          v-tooltip.left="slim ? item.label : undefined"
+          @click="go(item.to)"
+        >
+          <span class="nl-icon"><i :class="item.icon" /></span>
+          <Transition name="text-fade">
+            <span v-if="!slim" class="nl-text">{{ item.label }}</span>
+          </Transition>
+          <span v-if="!slim && isOn(item.to)" class="nl-pip" />
+        </div>
+
       </nav>
 
-      <!-- Logout -->
-      <div class="sidebar-footer">
-        <div class="sidebar-divider mb-2" />
-        <div
-          class="nav-item logout-item"
-          v-tooltip.left="collapsed ? 'تسجيل الخروج' : ''"
-          @click="logoutVisible = true"
+      <!-- User strip -->
+      <div class="user-strip">
+
+        <!-- عادي: زر كامل -->
+        <Button
+          v-if="!slim"
+          label="تسجيل الخروج"
+          icon="pi pi-sign-out"
+          fluid
+          outlined
+          severity="danger"
+          @click="dlgVisible = true"
+        />
+
+        <!-- مصغّر: أيقونة فقط -->
+        <button
+          v-else
+          class="slim-logout"
+          v-tooltip.left="'تسجيل الخروج'"
+          @click="dlgVisible = true"
         >
-          <i class="pi pi-sign-out nav-icon" />
-          <Transition name="label-fade">
-            <span v-if="!collapsed" class="nav-label">تسجيل الخروج</span>
-          </Transition>
-        </div>
+          <i class="pi pi-sign-out" />
+        </button>
+
       </div>
 
     </aside>
 
-    <!-- Main: Header + Body -->
-    <div class="admin-main">
+    <!-- ═══════════════════════════════
+         MAIN
+    ═══════════════════════════════ -->
+    <div class="body">
 
       <!-- Header -->
       <header class="admin-header surface-card border-bottom-1 border-200 shadow-1">
 
         <div class="flex align-items-center gap-2">
-          <!-- Hamburger button — mobile only -->
+          <!-- Hamburger — mobile only -->
           <Button
             icon="pi pi-bars"
             text rounded size="small" severity="secondary"
             class="mobile-menu-btn"
-            @click="isMobileOpen = true"
+            @click="mobileOpen = true"
           />
-
-          <i :class="currentPage.icon" class="text-primary" />
-          <span class="font-bold text-800">{{ currentPage.label }}</span>
+          <i :class="activePage.icon" class="text-primary" />
+          <span class="font-bold text-800">{{ activePage.label }}</span>
         </div>
 
         <!-- المستخدم -->
@@ -112,23 +128,26 @@
 
       </header>
 
-      <!-- Body -->
-      <main class="admin-content">
+      <!-- Page content -->
+      <main class="page-body">
         <RouterView />
       </main>
 
     </div>
 
-    <!-- Logout Dialog -->
+    <!-- ═══════════════════════════════
+         LOGOUT DIALOG
+    ═══════════════════════════════ -->
     <Dialog
-      v-model:visible="logoutVisible"
-      :modal="true" :draggable="false"
-      :closable="!isLoggingOut"
+      v-model:visible="dlgVisible"
+      :modal="true"
+      :draggable="false"
+      :closable="!loggingOut"
       :style="{ width: '320px' }"
       dir="rtl"
     >
       <template #container>
-        <div class="logout-dialog" :class="{ leaving: isLoggingOut }">
+        <div class="logout-dialog" :class="{ leaving: loggingOut }">
           <div class="icon-wrap">
             <div class="icon-ring">
               <i class="pi pi-sign-out" />
@@ -141,9 +160,9 @@
           </p>
           <div class="dialog-actions">
             <Button label="إلغاء" severity="secondary" outlined class="flex-1"
-              :disabled="isLoggingOut" @click="logoutVisible = false" />
+              :disabled="loggingOut" @click="dlgVisible = false" />
             <Button label="خروج" severity="danger" class="flex-1"
-              :loading="isLoggingOut" @click="confirmLogout" />
+              :loading="loggingOut" @click="doLogout" />
           </div>
         </div>
       </template>
@@ -164,183 +183,240 @@ const router = useRouter()
 const route  = useRoute()
 const auth   = useAuthStore()
 
-// Desktop: collapsed/expanded toggle
-const collapsed     = ref(false)
-// Mobile: sidebar overlay open/close
-const isMobileOpen  = ref(false)
+const slim       = ref(false)
+const mobileOpen = ref(false)
+const dlgVisible = ref(false)
+const loggingOut = ref(false)
 
-const logoutVisible = ref(false)
-const isLoggingOut  = ref(false)
-
-const navItems = [
-  { label: 'لوحة التحكم',     icon: 'pi pi-chart-bar', to: '/dashboard' },
-  { label: 'إدارة المنيو',     icon: 'pi pi-list',      to: '/dashboard/menu' },
-  { label: 'إدارة الطاولات',   icon: 'pi pi-th-large',  to: '/dashboard/tables' },
-  { label: 'إدارة المستخدمين', icon: 'pi pi-users',     to: '/dashboard/users' },
-  { label: 'سجل الطلبات',      icon: 'pi pi-history',   to: '/dashboard/orders' },
-  { label: 'صفحة الويتر',      icon: 'pi pi-clock',     to: '/dashboard/waiter' },
-  { label: 'صفحة الكاشير',     icon: 'pi pi-wallet',    to: '/dashboard/cashier' },
-  { label: 'الطابعات',          icon: 'pi pi-print',      to: '/dashboard/printers' },
-
+const mgmtNav = [
+  { label: 'لوحة التحكم',    icon: 'pi pi-objects-column', to: '/dashboard' },
+  { label: 'إدارة المنيو',    icon: 'pi pi-list',           to: '/dashboard/menu' },
+  { label: 'إدارة الطاولات',  icon: 'pi pi-table',          to: '/dashboard/tables' },
+  { label: 'المستخدمون',      icon: 'pi pi-users',          to: '/dashboard/users' },
+  { label: 'سجل الطلبات',     icon: 'pi pi-receipt',        to: '/dashboard/orders' },
+  { label: 'الطابعات',         icon: 'pi pi-print',          to: '/dashboard/printers' },
+  { label: 'المخازن',          icon: 'pi pi-box',            to: '/dashboard/inventory' },
 ]
 
-const currentPage = computed(() =>
-  navItems.find(item =>
-    item.to === '/dashboard'
-      ? route.path === '/dashboard'
-      : route.path.startsWith(item.to)
-  ) ?? { label: 'لوحة التحكم', icon: 'pi pi-chart-bar' }
+const opsNav = [
+  { label: 'الويتر',  icon: 'pi pi-server', to: '/dashboard/waiter' },
+  { label: 'الكاشير', icon: 'pi pi-wallet', to: '/dashboard/cashier' },
+]
+
+const allNav = [...mgmtNav, ...opsNav]
+
+const activePage = computed(() =>
+  allNav.find(n => n.to === '/dashboard'
+    ? route.path === '/dashboard'
+    : route.path.startsWith(n.to)
+  ) ?? { label: 'لوحة التحكم', icon: 'pi pi-objects-column' }
 )
 
-function isActive(to: string) {
-  if (to === '/dashboard') return route.path === '/dashboard'
-  return route.path.startsWith(to)
+function isOn(to: string) {
+  return to === '/dashboard' ? route.path === '/dashboard' : route.path.startsWith(to)
 }
 
-/** Navigate and auto-close sidebar on mobile after picking a page */
-function navigateTo(to: string) {
+function go(to: string) {
   router.push(to)
-  isMobileOpen.value = false
+  mobileOpen.value = false
 }
 
-async function confirmLogout() {
-  isLoggingOut.value = true
-  await new Promise(r => setTimeout(r, 800))
+async function doLogout() {
+  loggingOut.value = true
+  await new Promise(r => setTimeout(r, 700))
   auth.logout()
 }
 </script>
 
 <style scoped>
-/* ══════════════════════════════════════════
-   Layout الرئيسي
-══════════════════════════════════════════ */
-.admin-layout {
+.shell {
   display: flex;
   height: 100vh;
   overflow: hidden;
-  background: var(--p-surface-50);
+  background: #f4f4f5;
+  font-family: 'Tajawal', system-ui, sans-serif;
 }
 
-/* ══════════════════════════════════════════
-   Sidebar — shared base
-══════════════════════════════════════════ */
-.admin-sidebar {
-  width: 230px;
+/* ══ Sidebar ══ */
+.sidebar {
+  width: 220px;
   height: 100vh;
-  background: var(--p-surface-0);
-  border-left: 1px solid var(--p-surface-200);
+  background: #ffffff;
+  border-left: 1px solid #e4e4e7;
   display: flex;
   flex-direction: column;
-  transition: width 0.25s ease;
   flex-shrink: 0;
   overflow: hidden;
+  transition: width 0.22s cubic-bezier(.4,0,.2,1);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 50;
 }
 
-.admin-sidebar.collapsed {
-  width: 64px;
-}
+.sidebar.slim { width: 62px; }
 
-/* ── Sidebar Header ── */
-.sidebar-header {
+/* Brand */
+.brand {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 0.75rem;
+  gap: 0.6rem;
+  padding: 0 1rem;
   height: 60px;
-  border-bottom: 1px solid var(--p-surface-200);
+  border-bottom: 1px solid #f0f0f0;
   flex-shrink: 0;
-  gap: 0.5rem;
+  overflow: hidden;
 }
 
-.collapsed .sidebar-header {
+.sidebar.slim .brand {
   justify-content: center;
-  flex-direction: column;
-  height: 60px;
   padding: 0;
+  flex-direction: column;
   gap: 0;
 }
 
-.sidebar-logo {
-  width: 2rem;
-  height: 2rem;
+.brand-mark {
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
-  background: var(--p-primary-color);
+  background: #f97316;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
+.brand-mark i { color: #fff; font-size: 0.8rem; }
 
-/* ── Nav ── */
-.sidebar-nav {
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  min-width: 0;
+}
+.brand-name {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #18181b;
+  white-space: nowrap;
+  line-height: 1.15;
+}
+.brand-tag {
+  font-size: 0.62rem;
+  color: #a1a1aa;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+
+.slim-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid #e4e4e7;
+  background: transparent;
+  color: #a1a1aa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.62rem;
+  flex-shrink: 0;
+  transition: all .12s;
+  margin-right: auto;
+}
+.slim-btn:hover { background: #f4f4f5; color: #52525b; }
+.sidebar.slim .slim-btn { margin: 0; }
+
+/* Nav */
+.nav {
   flex: 1;
   padding: 0.75rem 0.5rem;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   overflow-y: auto;
   overflow-x: hidden;
+  scrollbar-width: none;
+}
+.nav::-webkit-scrollbar { display: none; }
+
+.nav-group-title {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #a1a1aa;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.5rem 0.6rem 0.2rem;
+  margin: 0;
 }
 
-.nav-item {
+.nav-sep {
+  height: 1px;
+  background: #f0f0f0;
+  margin: 0.5rem 0.4rem;
+}
+
+.nav-link {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.65rem 0.75rem;
-  border-radius: 10px;
+  gap: 0.65rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-  color: var(--p-text-color-secondary);
-  white-space: nowrap;
+  color: #71717a;
+  transition: all .12s ease;
+  position: relative;
   overflow: hidden;
+  white-space: nowrap;
 }
+.nav-link:hover    { background: #fafafa; color: #18181b; }
+.nav-link--on      { background: #fff7ed; color: #f97316; font-weight: 600; }
+.sidebar.slim .nav-link { justify-content: center; padding: 0.6rem; }
 
-.nav-item:hover {
-  background: var(--p-surface-100);
-  color: var(--p-text-color);
-}
-
-.nav-item.active {
-  background: var(--p-primary-50, #fff7ed);
-  color: var(--p-primary-color);
-  font-weight: 600;
-}
-
-.nav-icon {
-  font-size: 1rem;
+.nl-icon {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  width: 1rem;
-  text-align: center;
+  font-size: 0.82rem;
 }
+.nl-text { font-size: 0.83rem; flex: 1; }
+.nl-pip  { width: 5px; height: 5px; border-radius: 50%; background: #f97316; flex-shrink: 0; }
 
-.nav-label {
-  font-size: 0.875rem;
-}
-
-/* ── Footer ── */
-.sidebar-footer {
-  padding: 0.5rem;
+/* User strip */
+.user-strip {
+  padding: 0.75rem;
+  border-top: 1px solid #f0f0f0;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.sidebar-divider {
-  height: 1px;
-  background: var(--p-surface-200);
+/* slim mode: أيقونة خروج فقط */
+.slim-logout {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1.5px solid #fca5a5;
+  background: #fff1f2;
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all .15s;
+}
+.slim-logout:hover {
+  background: #fee2e2;
+  border-color: #f87171;
+  transform: scale(1.06);
 }
 
-.logout-item { color: var(--p-red-400) !important; }
-.logout-item:hover {
-  background: var(--p-red-50) !important;
-  color: var(--p-red-500) !important;
-}
-
-/* ══════════════════════════════════════════
-   Main area
-══════════════════════════════════════════ */
-.admin-main {
+/* ══ Main ══ */
+.body {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -348,7 +424,6 @@ async function confirmLogout() {
   min-width: 0;
 }
 
-/* ── Header ── */
 .admin-header {
   height: 60px;
   display: flex;
@@ -361,24 +436,15 @@ async function confirmLogout() {
   z-index: 10;
 }
 
-/* ── Body ── */
-.admin-content {
+.mobile-menu-btn { display: none; }
+
+.page-body {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
 }
 
-/* ══════════════════════════════════════════
-   Label Transition
-══════════════════════════════════════════ */
-.label-fade-enter-active { transition: opacity 0.2s ease 0.1s; }
-.label-fade-leave-active { transition: opacity 0.1s ease; }
-.label-fade-enter-from,
-.label-fade-leave-to { opacity: 0; }
-
-/* ══════════════════════════════════════════
-   Logout Dialog
-══════════════════════════════════════════ */
+/* ══ Logout Dialog ══ */
 .logout-dialog {
   display: flex;
   flex-direction: column;
@@ -390,82 +456,79 @@ async function confirmLogout() {
   transition: opacity 0.4s ease, transform 0.4s ease;
 }
 .logout-dialog.leaving { opacity: 0.4; transform: scale(0.97); }
+
 .icon-wrap { margin-bottom: 1.25rem; }
+
 .icon-ring {
-  width: 72px; height: 72px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   background: var(--p-red-100);
-  display: flex; align-items: center; justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   animation: pulse 2s ease-in-out infinite;
 }
 .icon-ring i { font-size: 1.75rem; color: var(--p-red-500); }
+
 @keyframes pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.2); }
   50%       { box-shadow: 0 0 0 10px rgba(239,68,68,0); }
 }
+
 .dialog-title { font-size: 1.15rem; font-weight: 700; margin: 0 0 0.4rem; color: var(--p-text-color); }
-.dialog-sub { font-size: 0.9rem; color: var(--p-text-muted-color); margin: 0 0 1.5rem; line-height: 1.6; }
-.username { font-weight: 700; color: var(--p-primary-color); }
+.dialog-sub   { font-size: 0.9rem; color: var(--p-text-muted-color); margin: 0 0 1.5rem; line-height: 1.6; }
+.username     { font-weight: 700; color: var(--p-primary-color); }
 .dialog-actions { display: flex; gap: 0.75rem; width: 100%; }
 
-/* ══════════════════════════════════════════
-   DESKTOP  (≥ 768px) — normal sticky sidebar
-══════════════════════════════════════════ */
-@media (min-width: 768px) {
-  .mobile-menu-btn  { display: none !important; }
-  .mobile-close-btn { display: none !important; }
-
-  /* Sidebar always visible, just toggled wide ↔ narrow */
-  .admin-sidebar {
-    position: sticky;
-    transform: none !important;
-  }
-}
-
-/* ══════════════════════════════════════════
-   MOBILE  (< 768px) — overlay drawer
-══════════════════════════════════════════ */
-@media (max-width: 767px) {
-  .desktop-toggle  { display: none !important; }
-  .mobile-menu-btn { display: inline-flex !important; }
-  .mobile-close-btn { display: inline-flex !important; }
-
-  /* Sidebar floats above content */
-  .admin-sidebar {
-    position: fixed;
-    top: 0;
-    right: 0;         /* RTL: drawer slides from the right */
-    height: 100vh;
-    width: 260px !important;  /* always full-width on mobile, ignore collapsed */
-    transform: translateX(100%);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
-    z-index: 200;
-  }
-
-  .admin-sidebar.mobile-open {
-    transform: translateX(0);
-  }
-
-  /* Keep nav-label always visible on mobile (ignore collapsed state) */
-  .admin-sidebar .nav-label { display: inline !important; opacity: 1 !important; }
-  .admin-sidebar .sidebar-logo { margin: 0 !important; }
-
-  /* Main takes full width */
-  .admin-main { width: 100%; }
-}
-
-/* ── Backdrop ── */
-.sidebar-backdrop {
+/* ══ Backdrop ══ */
+.backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0,0,0,.38);
   z-index: 199;
   backdrop-filter: blur(2px);
 }
 
-.backdrop-fade-enter-active { transition: opacity 0.25s ease; }
-.backdrop-fade-leave-active { transition: opacity 0.2s ease; }
-.backdrop-fade-enter-from,
-.backdrop-fade-leave-to { opacity: 0; }
+/* ══ Transitions ══ */
+.text-fade-enter-active { transition: opacity .15s ease .04s, transform .15s ease .04s; }
+.text-fade-leave-active { transition: opacity .1s ease; }
+.text-fade-enter-from   { opacity: 0; transform: translateX(4px); }
+.text-fade-leave-to     { opacity: 0; }
+
+.bd-enter-active { transition: opacity .2s ease; }
+.bd-leave-active { transition: opacity .18s ease; }
+.bd-enter-from, .bd-leave-to { opacity: 0; }
+
+/* ══ Helpers ══ */
+.dt-only  { }
+.mob-only { display: none !important; }
+
+/* ══ Desktop ══ */
+@media (min-width: 768px) {
+  .mobile-menu-btn { display: none !important; }
+  .sidebar { position: sticky; transform: none !important; }
+}
+
+/* ══ Mobile ══ */
+@media (max-width: 767px) {
+  .dt-only  { display: none !important; }
+  .mob-only { display: flex !important; }
+  .mobile-menu-btn { display: inline-flex !important; }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100vh;
+    width: 240px !important;
+    transform: translateX(100%);
+    transition: transform .28s cubic-bezier(.4,0,.2,1);
+    box-shadow: -6px 0 28px rgba(0,0,0,.1);
+    z-index: 200;
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar .nl-text { display: inline !important; opacity: 1 !important; }
+  .body { width: 100%; }
+}
 </style>
