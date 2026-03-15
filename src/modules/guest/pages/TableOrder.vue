@@ -3,29 +3,29 @@
   <div class="min-h-screen surface-ground" dir="rtl">
 
     <!-- Header -->
-<div class="surface-card shadow-1 px-3 py-3 sticky top-0 z-5">
-  <div class="flex align-items-center justify-content-between">
-    <div class="flex align-items-center gap-2">
+    <div class="surface-card shadow-1 px-3 py-3 sticky top-0 z-5">
+      <div class="flex align-items-center justify-content-between">
+        <div class="flex align-items-center gap-2">
 
-      <!-- زر الرجوع للويتر/ادمن فقط -->
-      <Button
-        v-if="isWaiterRoute"
-        icon="pi pi-arrow-right"
-        text
-        rounded
-        size="small"
-        class="ml-1"
-        @click="goBack"
-      />
+          <!-- زر الرجوع للويتر/ادمن فقط -->
+          <Button
+            v-if="isWaiterRoute"
+            icon="pi pi-arrow-right"
+            text
+            rounded
+            size="small"
+            class="ml-1"
+            @click="goBack"
+          />
 
-      <div>
-        <p class="font-bold text-base m-0 line-height-1">مطعمنا</p>
-        <span class="text-color-secondary text-xs">طاولة {{ tableNumber }}</span>
+          <div>
+            <p class="font-bold text-base m-0 line-height-1">مطعمنا</p>
+            <span class="text-color-secondary text-xs">طاولة {{ tableNumber }}</span>
+          </div>
+        </div>
+        <Tag value="متاحة" severity="success" class="text-xs" />
       </div>
     </div>
-    <Tag value="متاحة" severity="success" class="text-xs" />
-  </div>
-</div>
 
     <!-- Loading -->
     <div v-if="loading" class="flex justify-content-center align-items-center py-8">
@@ -122,35 +122,50 @@
               <div
                 v-for="item in existingItems"
                 :key="item.id"
-                class="flex align-items-center justify-content-between py-2 border-bottom-1 border-100"
+                class="py-2 border-bottom-1 border-100"
               >
-                <span class="text-xs text-900 flex-1">{{ item.name }}</span>
-                <div class="flex align-items-center gap-1">
-                  <Button
-                    icon="pi pi-trash"
-                    text rounded size="small" severity="danger"
-                    style="width: 26px; height: 26px;"
-                    :loading="updatingId === item.id && updatingAction === 'delete'"
-                    @click="removeExistingItem(item.id)"
-                  />
-                  <Button
-                    icon="pi pi-minus"
-                    text rounded size="small"
-                    style="width: 26px; height: 26px;"
-                    :loading="updatingId === item.id && updatingAction === 'decrease'"
-                    @click="updateExistingItemQty(item.id, item.quantity - 1)"
-                  />
-                  <span class="font-bold text-xs text-primary w-1rem text-center">{{ item.quantity }}</span>
-                  <Button
-                    icon="pi pi-plus"
-                    text rounded size="small"
-                    style="width: 26px; height: 26px;"
-                    :loading="updatingId === item.id && updatingAction === 'increase'"
-                    @click="updateExistingItemQty(item.id, item.quantity + 1)"
-                  />
-                  <span class="text-xs text-500" style="min-width: 55px; text-align: left;">
-                    {{ item.total?.toLocaleString() }} د.ع
-                  </span>
+                <div class="flex align-items-center justify-content-between">
+                  <div class="flex-1 min-w-0">
+                    <span class="text-xs text-900 font-medium block">{{ item.name }}</span>
+                    <div v-if="item.selectedOptions?.length" class="flex flex-wrap gap-1 mt-1">
+                      <span
+                        v-for="opt in item.selectedOptions"
+                        :key="opt.id"
+                        class="text-xs text-primary surface-100 px-2 border-round"
+                      >
+                        {{ opt.name }}
+                        <span v-if="opt.price > 0">+{{ opt.price.toLocaleString() }}</span>
+                      </span>
+                    </div>
+                    <p v-if="item.note" class="m-0 text-xs text-orange-500 mt-1">📝 {{ item.note }}</p>
+                  </div>
+                  <div class="flex align-items-center gap-1">
+                    <Button
+                      icon="pi pi-trash"
+                      text rounded size="small" severity="danger"
+                      style="width: 26px; height: 26px;"
+                      :loading="updatingId === item.id && updatingAction === 'delete'"
+                      @click="removeExistingItem(item.id)"
+                    />
+                    <Button
+                      icon="pi pi-minus"
+                      text rounded size="small"
+                      style="width: 26px; height: 26px;"
+                      :loading="updatingId === item.id && updatingAction === 'decrease'"
+                      @click="updateExistingItemQty(item.id, item.quantity - 1)"
+                    />
+                    <span class="font-bold text-xs text-primary w-1rem text-center">{{ item.quantity }}</span>
+                    <Button
+                      icon="pi pi-plus"
+                      text rounded size="small"
+                      style="width: 26px; height: 26px;"
+                      :loading="updatingId === item.id && updatingAction === 'increase'"
+                      @click="updateExistingItemQty(item.id, item.quantity + 1)"
+                    />
+                    <span class="text-xs text-500" style="min-width: 55px; text-align: left;">
+                      {{ item.total?.toLocaleString() }} د.ع
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -312,16 +327,13 @@ import Divider         from 'primevue/divider'
 import Dialog          from 'primevue/dialog'
 import ProgressSpinner from 'primevue/progressspinner'
 
-// ── ثوابت ──────────────────────────────────────────────
 const CUSTOMER_ID = 1
 
-// ── composables ────────────────────────────────────────
 const route     = useRoute()
 const router    = useRouter()
 const toast     = useToast()
 const authStore = useAuthStore()
 
-// ── state ──────────────────────────────────────────────
 const loading            = ref(true)
 const submitting         = ref(false)
 const successVisible     = ref(false)
@@ -329,7 +341,6 @@ const tableData          = ref<any | null>(null)
 const allCategories      = ref<MenuCategoryApi[]>([])
 const selectedCategoryId = ref<number | null>(null)
 const cartItems          = ref<CartItemLocal[]>([])
-const existingItems      = ref<{ id: number; name: string; quantity: number; price: number; total: number }[]>([])
 const lastSubmittedItems = ref<CartItemLocal[]>([])
 const dialogVisible      = ref(false)
 const selectedItem       = ref<MenuItemApi | null>(null)
@@ -340,16 +351,32 @@ const showPrevOrders     = ref(false)
 const updatingId         = ref<number | null>(null)
 const updatingAction     = ref<string | null>(null)
 
-// ── helpers ────────────────────────────────────────────
-/** تحويل MenuItemApi → MenuItem (يضمن أن image دائماً string) */
+// ✅ إصلاح 1: type يشمل note و selectedOptions
+const existingItems = ref<{
+  id: number
+  name: string
+  quantity: number
+  price: number
+  total: number
+  note?: string
+  selectedOptions?: { id: number; name: string; price: number }[]
+}[]>([])
+
 function normalizeItem(item: MenuItemApi): MenuItem {
-  return {
-    ...item,
-    image: item.image ?? '',
-  } as unknown as MenuItem
+  return { ...item, image: item.image ?? '' } as unknown as MenuItem
 }
 
-// ── computed ───────────────────────────────────────────
+function isPendingInvoice(inv: any): boolean {
+  const status = inv.invoiceStatus ?? inv.status
+  return (
+    status === 0 ||
+    status === 'Pending' ||
+    status === 'pending' ||
+    status === 'Open' ||
+    status === 'open'
+  )
+}
+
 const isWaiterRoute = computed(() => !!route.params.id)
 
 const tableId = computed(() =>
@@ -385,42 +412,41 @@ const totalPrice = computed(() =>
   cartItems.value.reduce((s, i) => s + itemTotal(i), 0)
 )
 
-// ── helpers ────────────────────────────────────────────
 function itemTotal(item: CartItemLocal) {
   const optionsTotal = item.selectedOptions?.reduce((s: number, o: any) => s + o.price, 0) ?? 0
   return (item.menuItem.price + optionsTotal) * item.quantity
 }
 
-function isPendingInvoice(inv: any): boolean {
-  return inv.invoiceStatus === 0 || inv.status === 0
-}
-
-// ── refreshInvoices ────────────────────────────────────
 async function refreshInvoices() {
   if (isWaiterRoute.value) {
     if (!tableId.value) return
-    const invoices    = await tableApi.getInvoices(tableId.value)
-    const rawInvoices = Array.isArray(invoices) ? invoices : []
 
-    tableInvoices.value = rawInvoices.map((inv: any) => ({
-      ...inv,
-      status:     inv.invoiceStatus ?? inv.status ?? 0,
-      totalPrice: inv.finalPrice    ?? inv.totalPrice ?? 0,
-      items:      inv.invoiceItemsDto ?? inv.items ?? [],
-    }))
+    const response = await tableApi.getInvoices(tableId.value)
 
-    const openInvoice = tableInvoices.value.find(inv => isPendingInvoice(inv))
+    // ✅ يدعم object واحد أو array
+    const rawInvoices = Array.isArray(response)
+      ? response
+      : response ? [response] : []
+
+    tableInvoices.value = rawInvoices
+
+    const openInvoice = rawInvoices.find((inv: any) => isPendingInvoice(inv))
 
     if (openInvoice) {
       currentInvoiceId.value = openInvoice.id
-      const invoiceItems     = (openInvoice as any).items ?? openInvoice.invoiceItemsDto ?? []
-      existingItems.value    = invoiceItems.map((item: any) => ({
-        id:       item.id,
-        name:     item.menuItemName,
-        quantity: item.quantity,
-        price:    item.price,
-        total:    item.totalPrice,
+
+      const invoiceItems = openInvoice.invoiceItemsDto ?? openInvoice.items ?? []
+
+      existingItems.value = invoiceItems.map((item: any) => ({
+        id:              item.id,
+        name:            item.menuItemName ?? item.name ?? 'غير معروف',
+        quantity:        item.quantity,
+        price:           item.price ?? 0,
+        total:           item.totalPrice ?? 0,
+        note:            item.notes ?? undefined,                                          // ✅ إصلاح 2: note بدون s
+        selectedOptions: (item.selectedOptionsDto ?? []).filter((o: any) => o.name?.trim()), // ✅ يفلتر الأسماء الفارغة
       }))
+
       showPrevOrders.value = true
     } else {
       currentInvoiceId.value = null
@@ -437,11 +463,13 @@ async function refreshInvoices() {
       if (isPendingInvoice(invoice)) {
         const items = (invoice as any).invoiceItemsDto ?? (invoice as any).items ?? []
         existingItems.value = items.map((item: any) => ({
-          id:       item.id,
-          name:     item.menuItemName,
-          quantity: item.quantity,
-          price:    item.price,
-          total:    item.totalPrice,
+          id:              item.id,
+          name:            item.menuItemName ?? item.name ?? 'غير معروف',
+          quantity:        item.quantity,
+          price:           item.price ?? item.unitPrice ?? 0,
+          total:           item.totalPrice ?? 0,
+          note:            item.notes ?? undefined,
+          selectedOptions: (item.selectedOptionsDto ?? []).filter((o: any) => o.name?.trim()),
         }))
       } else {
         localStorage.removeItem(`invoice_${route.params.token}`)
@@ -454,7 +482,6 @@ async function refreshInvoices() {
   }
 }
 
-// ── lifecycle ──────────────────────────────────────────
 onMounted(async () => {
   try {
     if (isWaiterRoute.value) {
@@ -481,13 +508,16 @@ onMounted(async () => {
           const invoice = await orderApi.getById(Number(savedInvoiceId))
           if (invoice && isPendingInvoice(invoice)) {
             currentInvoiceId.value = invoice.id
+            // ✅ إصلاح 3: items بدل invoiceItems
             const items = (invoice as any).invoiceItemsDto ?? (invoice as any).items ?? []
             existingItems.value = items.map((item: any) => ({
-              id:       item.id,
-              name:     item.menuItemName,
-              quantity: item.quantity,
-              price:    item.price,
-              total:    item.totalPrice,
+              id:              item.id,
+              name:            item.menuItemName ?? item.name ?? 'غير معروف',
+              quantity:        item.quantity,
+              price:           item.price ?? 0,
+              total:           item.totalPrice ?? 0,
+              note:            item.notes ?? undefined,
+              selectedOptions: (item.selectedOptionsDto ?? []).filter((o: any) => o.name?.trim()),
             }))
           } else {
             localStorage.removeItem(`invoice_${route.params.token}`)
@@ -509,7 +539,6 @@ onMounted(async () => {
   }
 })
 
-// ── actions ────────────────────────────────────────────
 function openItem(item: MenuItem) {
   selectedItem.value  = item as unknown as MenuItemApi
   dialogVisible.value = true
@@ -560,7 +589,8 @@ async function removeExistingItem(itemId: number) {
 
 async function updateExistingItemQty(itemId: number, newQty: number) {
   if (newQty <= 0) return removeExistingItem(itemId)
-  const action = newQty > (existingItems.value.find(i => i.id === itemId)?.quantity ?? 0) ? 'increase' : 'decrease'
+  const currentItem = existingItems.value.find(i => i.id === itemId)
+  const action = newQty > (currentItem?.quantity ?? 0) ? 'increase' : 'decrease'
   updatingId.value     = itemId
   updatingAction.value = action
   try {
@@ -595,7 +625,6 @@ async function submitOrder() {
         notes:      item.note || undefined,
       }))
       const res = await customerApi.submitOrder(token, items)
-
       if (res?.id) {
         currentInvoiceId.value = res.id
         localStorage.setItem(`invoice_${token}`, String(res.id))
